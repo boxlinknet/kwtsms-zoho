@@ -1,0 +1,128 @@
+// Function: kwtsms_get_config
+// Arguments: none
+// Returns: JSON map with non-sensitive configuration
+//
+// Reads all kwtsms_* org variables and returns a consolidated
+// config map. Never includes username or password.
+
+result = Map();
+
+try
+{
+	// Read flags
+	flags_raw = zoho.crm.getOrgVariable("kwtsms_flags");
+	enabled = false;
+	test_mode = true;
+	debug_mode = false;
+	if(flags_raw != null && flags_raw != "" && flags_raw != "null")
+	{
+		try
+		{
+			flags = flags_raw.toMap();
+			if(flags.containKey("enabled"))
+			{
+				enabled = flags.get("enabled");
+			}
+			if(flags.containKey("test_mode"))
+			{
+				test_mode = flags.get("test_mode");
+			}
+			if(flags.containKey("debug"))
+			{
+				debug_mode = flags.get("debug");
+			}
+		}
+		catch(fe)
+		{
+			info "kwtsms_get_config: failed to parse flags JSON: " + fe;
+		}
+	}
+	// Read configured status
+	configured_raw = zoho.crm.getOrgVariable("kwtsms_configured");
+	configured = false;
+	if(configured_raw == "true")
+	{
+		configured = true;
+	}
+	// Read sender ID
+	sender_id = zoho.crm.getOrgVariable("kwtsms_sender_id");
+	if(sender_id == null || sender_id == "null")
+	{
+		sender_id = "";
+	}
+	// Read default country
+	default_country = zoho.crm.getOrgVariable("kwtsms_default_country");
+	if(default_country == null || default_country == "" || default_country == "null")
+	{
+		default_country = "965";
+	}
+	// Read balance
+	balance_raw = zoho.crm.getOrgVariable("kwtsms_balance");
+	balance = 0;
+	if(balance_raw != null && balance_raw != "" && balance_raw != "null")
+	{
+		try
+		{
+			balance = balance_raw.toDecimal();
+		}
+		catch(be)
+		{
+			balance = 0;
+		}
+	}
+	// Read sender IDs list
+	senderids = List();
+	senderids_raw = zoho.crm.getOrgVariable("kwtsms_senderids_json");
+	if(senderids_raw != null && senderids_raw != "" && senderids_raw != "null")
+	{
+		try
+		{
+			senderids = senderids_raw.toJSONList();
+		}
+		catch(se)
+		{
+			info "kwtsms_get_config: failed to parse senderids JSON: " + se;
+		}
+	}
+	// Read coverage list
+	coverage = List();
+	coverage_raw = zoho.crm.getOrgVariable("kwtsms_coverage_json");
+	if(coverage_raw != null && coverage_raw != "" && coverage_raw != "null")
+	{
+		try
+		{
+			coverage = coverage_raw.toJSONList();
+		}
+		catch(ce)
+		{
+			info "kwtsms_get_config: failed to parse coverage JSON: " + ce;
+		}
+	}
+	// Read last sync timestamp
+	last_sync = zoho.crm.getOrgVariable("kwtsms_last_sync");
+	if(last_sync == null || last_sync == "null")
+	{
+		last_sync = "";
+	}
+	// Build result map (never include username or password)
+	result.put("enabled", enabled);
+	result.put("test_mode", test_mode);
+	result.put("debug", debug_mode);
+	result.put("configured", configured);
+	result.put("sender_id", sender_id);
+	result.put("default_country", default_country);
+	result.put("balance", balance);
+	result.put("senderids", senderids);
+	result.put("coverage", coverage);
+	result.put("last_sync", last_sync);
+	result.put("status", "OK");
+	info "kwtsms_get_config: config loaded successfully, configured=" + configured;
+}
+catch(e)
+{
+	info "kwtsms_get_config: error loading config: " + e;
+	result.put("status", "ERROR");
+	result.put("error", "Failed to load configuration");
+}
+
+return result;

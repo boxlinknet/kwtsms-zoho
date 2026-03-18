@@ -1,0 +1,65 @@
+/* kwtSMS for Zoho CRM - RTL Overrides for Arabic */
+
+[dir="rtl"] body,
+body.rtl {
+  direction: rtl;
+  text-align: right;
+  font-family: 'Noto Sans Arabic', 'Lato', 'Helvetica', 'Arial', sans-serif;
+}
+
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4,
+body.rtl h1, body.rtl h2, body.rtl h3, body.rtl h4 {
+  font-family: 'Noto Sans Arabic', 'Montserrat', sans-serif;
+}
+
+/* Status bar */
+[dir="rtl"] .kwt-status-bar {
+  flex-direction: row-reverse;
+}
+
+/* Form labels */
+[dir="rtl"] .kwt-form-group label {
+  text-align: right;
+}
+
+/* Toggle switch flip */
+[dir="rtl"] .kwt-toggle {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .kwt-toggle input:checked + .slider::after {
+  transform: translateX(-18px);
+}
+
+/* Buttons */
+[dir="rtl"] .kwt-btn {
+  flex-direction: row-reverse;
+}
+
+/* Character counter */
+[dir="rtl"] .kwt-char-counter {
+  flex-direction: row-reverse;
+}
+
+/* Logo */
+[dir="rtl"] .kwt-logo {
+  flex-direction: row-reverse;
+}
+
+/* Help items */
+[dir="rtl"] .kwt-help-item {
+  text-align: right;
+}
+
+/* Badges */
+[dir="rtl"] .kwt-badge {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Input text alignment */
+[dir="rtl"] .kwt-input,
+[dir="rtl"] .kwt-select,
+[dir="rtl"] .kwt-textarea {
+  text-align: right;
+}

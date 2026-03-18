@@ -1,0 +1,58 @@
+{
+  "service": "CRM",
+  "cspDomains": {
+    "connect-src": ["https://www.kwtsms.com"]
+  },
+  "connectors": [
+    {
+      "name": "kwtsms_api",
+      "url": "https://www.kwtsms.com/API/",
+      "methods": ["POST"],
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      }
+    }
+  ],
+  "components": {
+    "widgets": [
+      {
+        "name": "kwtsms_settings",
+        "url": "/app/settings.html",
+        "location": "webtab",
+        "label": "kwtSMS",
+        "default_height": 700
+      },
+      {
+        "name": "kwtsms_sendsms",
+        "url": "/app/sendsms.html",
+        "location": "custom_button",
+        "default_height": 480,
+        "default_width": 520
+      }
+    ],
+    "custom_buttons": [
+      {
+        "name": "Send SMS",
+        "location": [
+          "contact.detail.more",
+          "lead.detail.more",
+          "deal.detail.more"
+        ],
+        "widget_ref": "kwtsms_sendsms"
+      }
+    ],
+    "variables": [
+      { "name": "kwtsms_username", "type": "hidden", "default": "" },
+      { "name": "kwtsms_password", "type": "hidden", "default": "" },
+      { "name": "kwtsms_flags", "type": "standard", "default": "{\"enabled\":false,\"test_mode\":true,\"debug\":false}" },
+      { "name": "kwtsms_sender_id", "type": "standard", "default": "" },
+      { "name": "kwtsms_default_country", "type": "standard", "default": "965" },
+      { "name": "kwtsms_balance", "type": "readonly", "default": "0" },
+      { "name": "kwtsms_senderids_json", "type": "readonly", "default": "[]" },
+      { "name": "kwtsms_coverage_json", "type": "readonly", "default": "[]" },
+      { "name": "kwtsms_last_sync", "type": "readonly", "default": "" },
+      { "name": "kwtsms_configured", "type": "readonly", "default": "false" }
+    ]
+  }
+}

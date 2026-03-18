@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send SMS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://live.zwidgets.com/js-sdk/1.2/ZohoEmbeddedAppSDK.min.js"></script>
+    <style>
+        /* Popup-specific layout overrides only */
+        body { margin: 0; padding: 0; overflow-y: auto; }
+        .kwt-container { max-width: 520px; padding: 16px 20px; }
+        .kwt-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .kwt-header img { height: 24px; width: auto; }
+        .kwt-header h2 { margin: 0; font-size: 1.15rem; }
+        .kwt-banners { margin-bottom: 12px; }
+        .kwt-normalized-preview { font-size: 0.8rem; color: #888; margin-top: 4px; min-height: 16px; }
+        .kwt-btn-primary.kwt-btn-fullwidth { width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="kwt-container">
+        <div class="kwt-header">
+            <img src="images/kwtsms-logo.png" alt="kwtSMS">
+            <h2 data-i18n="send_title">Send SMS</h2>
+        </div>
+
+        <div class="kwt-banners">
+            <div id="test-mode-banner" class="kwt-banner warning hidden">
+                <strong data-i18n="status_test_mode">Test Mode</strong>:
+                <span data-i18n="send_test_mode_warning">Messages will not be delivered.</span>
+            </div>
+            <div id="disabled-banner" class="kwt-banner error hidden">
+                <strong data-i18n="status_disabled">Disabled</strong>:
+                <span data-i18n="send_gateway_disabled">Gateway is disabled. Enable it in Settings.</span>
+            </div>
+        </div>
+
+        <div class="kwt-form-group">
+            <label for="sms-recipient" data-i18n="send_recipient">Recipient</label>
+            <input type="text" id="sms-recipient" class="kwt-input" placeholder="96598765432" autocomplete="off">
+            <div id="normalized-preview" class="kwt-normalized-preview"></div>
+        </div>
+
+        <div class="kwt-form-group">
+            <label for="sms-sender" data-i18n="send_sender_id">Sender ID</label>
+            <select id="sms-sender" class="kwt-select">
+                <option value="">...</option>
+            </select>
+        </div>
+
+        <div class="kwt-form-group">
+            <label for="sms-message" data-i18n="send_message">Message</label>
+            <textarea id="sms-message" class="kwt-textarea" rows="5" data-i18n-placeholder="send_message_placeholder" placeholder="Type your message..."></textarea>
+            <div id="char-counter" class="kwt-char-counter">0/160 (0 pages, English)</div>
+        </div>
+
+        <button id="send-btn" class="kwt-btn kwt-btn-primary kwt-btn-fullwidth" disabled>
+            <span data-i18n="send_button">Send SMS</span>
+        </button>
+
+        <div id="send-result" class="kwt-result hidden"></div>
+    </div>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/sms-counter.js"></script>
+    <script src="js/sendsms.js"></script>
+</body>
+</html>

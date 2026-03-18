@@ -1,0 +1,165 @@
+// Function: kwtsms_validate
+// Arguments: mobile (string) - comma-separated phone numbers
+// Returns: result map with OK/ER/NR arrays from the kwtSMS validate API
+//
+// Normalizes input numbers inline and validates them against the
+// kwtSMS /validate/ endpoint.
+
+result = Map();
+
+try
+{
+	// Step 1: Read default country and coverage for normalization
+	default_country = zoho.crm.getOrgVariable("kwtsms_default_country");
+	if(default_country == null || default_country == "" || default_country == "null")
+	{
+		default_country = "965";
+	}
+	coverage_raw = zoho.crm.getOrgVariable("kwtsms_coverage_json");
+	coverage_list = List();
+	if(coverage_raw != null && coverage_raw != "" && coverage_raw != "null")
+	{
+		try
+		{
+			coverage_list = coverage_raw.toJSONList();
+		}
+		catch(ce)
+		{
+			info "kwtsms_validate: failed to parse coverage JSON";
+		}
+	}
+	// Step 2: Split and normalize each number
+	raw_numbers = mobile.toList(",");
+	normalized_list = List();
+	for each  raw in raw_numbers
+	{
+		num = raw.trim();
+		if(num == "")
+		{
+			continue;
+		}
+		// Inline normalization: convert Arabic-Indic digits
+		num = num.replaceAll("٠", "0");
+		num = num.replaceAll("١", "1");
+		num = num.replaceAll("٢", "2");
+		num = num.replaceAll("٣", "3");
+		num = num.replaceAll("٤", "4");
+		num = num.replaceAll("٥", "5");
+		num = num.replaceAll("٦", "6");
+		num = num.replaceAll("٧", "7");
+		num = num.replaceAll("٨", "8");
+		num = num.replaceAll("٩", "9");
+		// Convert Extended Arabic-Indic / Persian digits
+		num = num.replaceAll("۰", "0");
+		num = num.replaceAll("۱", "1");
+		num = num.replaceAll("۲", "2");
+		num = num.replaceAll("۳", "3");
+		num = num.replaceAll("۴", "4");
+		num = num.replaceAll("۵", "5");
+		num = num.replaceAll("۶", "6");
+		num = num.replaceAll("۷", "7");
+		num = num.replaceAll("۸", "8");
+		num = num.replaceAll("۹", "9");
+		// Strip non-digits
+		num = num.replaceAll("[^0-9]", "");
+		// Strip leading "00"
+		if(num.startsWith("00"))
+		{
+			num = num.removeFirstOccurrence("00");
+		}
+		else if(num.startsWith("0"))
+		{
+			num = num.removeFirstOccurrence("0");
+		}
+		// If too short, prepend default country
+		if(num.length() < 8)
+		{
+			num = default_country + num;
+		}
+		// Check coverage prefix
+		has_match = false;
+		for each  prefix in coverage_list
+		{
+			p = prefix.replaceAll("\"", "").trim();
+			if(p != "" && num.startsWith(p))
+			{
+				has_match = true;
+				break;
+			}
+		}
+		if(!has_match && !num.startsWith(default_country))
+		{
+			num = default_country + num;
+		}
+		normalized_list.add(num);
+	}
+	if(normalized_list.isEmpty())
+	{
+		result.put("status", "ERROR");
+		result.put("error", "No valid phone numbers provided");
+		return result;
+	}
+	// Log masked count
+	info "kwtsms_validate: validating " + normalized_list.size() + " numbers";
+	// Step 3: Read credentials
+	api_username = zoho.crm.getOrgVariable("kwtsms_username");
+	api_password = zoho.crm.getOrgVariable("kwtsms_password");
+	if(api_username == null || api_username == "" || api_password == null || api_password == "")
+	{
+		result.put("status", "ERROR");
+		result.put("error", "No credentials configured. Please login first.");
+		return result;
+	}
+	// Step 4: Build validate request
+	// Join normalized numbers as comma-separated string
+	mobile_string = "";
+	for each  n in normalized_list
+	{
+		if(mobile_string != "")
+		{
+			mobile_string = mobile_string + ",";
+		}
+		mobile_string = mobile_string + n;
+	}
+	validate_payload = Map();
+	validate_payload.put("username", api_username);
+	validate_payload.put("password", api_password);
+	validate_payload.put("mobile", mobile_string);
+	validate_response = invokeurl
+	[
+		url: "https://www.kwtsms.com/API/validate/"
+		type: POST
+		parameters: validate_payload.toString()
+		content-type: "application/json"
+	];
+	validate_data = validate_response.toMap();
+	// Check for API error
+	if(validate_data.containKey("error"))
+	{
+		info "kwtsms_validate: API error: " + validate_data.get("error");
+		result.put("status", "ERROR");
+		result.put("error", validate_data.get("error"));
+		return result;
+	}
+	// Step 5: Return the mobile map with OK, ER, NR arrays
+	result.put("status", "OK");
+	if(validate_data.containKey("mobile"))
+	{
+		mobile_result = validate_data.get("mobile");
+		result.put("mobile", mobile_result);
+	}
+	else
+	{
+		// Return entire response if structure differs
+		result.put("mobile", validate_data);
+	}
+	info "kwtsms_validate: validation complete";
+}
+catch(e)
+{
+	info "kwtsms_validate: validation failed: " + e;
+	result.put("status", "ERROR");
+	result.put("error", "Validation failed: " + e.toString());
+}
+
+return result;

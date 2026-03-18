@@ -1,0 +1,40 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+
+# Claude / AI
+.claude/
+CLAUDE.md
+napkin.md
+
+# Documentation (local only)
+docs/
+
+# Dependencies
+node_modules/
+vendor/
+Gemfile.lock
+
+# Build artifacts
+dist/
+*.zip
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Worktrees
+.worktrees/
+
+# Docker
+docker/
+
+# Tests (local only)
+tests/

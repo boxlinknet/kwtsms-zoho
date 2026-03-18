@@ -1,0 +1,97 @@
+// Function: kwtsms_save_config
+// Arguments: settings (string - JSON)
+// Returns: result map {"status": "OK"} or {"status": "ERROR", "error": "..."}
+//
+// Parses the settings JSON and updates non-sensitive org variables.
+// Rejects any attempt to set username or password through this function.
+
+result = Map();
+
+try
+{
+	// Parse the settings JSON string
+	settings_map = settings.toMap();
+	// Security: reject if username or password keys are present
+	if(settings_map.containKey("username") || settings_map.containKey("password"))
+	{
+		result.put("status", "ERROR");
+		result.put("error", "Cannot update credentials through save_config. Use login instead.");
+		info "kwtsms_save_config: rejected attempt to update credentials";
+		return result;
+	}
+	// Read current flags to merge updates
+	flags_raw = zoho.crm.getOrgVariable("kwtsms_flags");
+	current_flags = Map();
+	current_flags.put("enabled", false);
+	current_flags.put("test_mode", true);
+	current_flags.put("debug", false);
+	if(flags_raw != null && flags_raw != "" && flags_raw != "null")
+	{
+		try
+		{
+			current_flags = flags_raw.toMap();
+		}
+		catch(fe)
+		{
+			info "kwtsms_save_config: failed to parse existing flags, using defaults";
+		}
+	}
+	// Update flags if provided
+	flags_changed = false;
+	if(settings_map.containKey("enabled"))
+	{
+		current_flags.put("enabled", settings_map.get("enabled"));
+		flags_changed = true;
+	}
+	if(settings_map.containKey("test_mode"))
+	{
+		current_flags.put("test_mode", settings_map.get("test_mode"));
+		flags_changed = true;
+	}
+	if(settings_map.containKey("debug"))
+	{
+		current_flags.put("debug", settings_map.get("debug"));
+		flags_changed = true;
+	}
+	// Save updated flags
+	if(flags_changed)
+	{
+		zoho.crm.setOrgVariable("kwtsms_flags", current_flags.toString());
+		info "kwtsms_save_config: flags updated";
+	}
+	// Update sender_id if provided
+	if(settings_map.containKey("sender_id"))
+	{
+		sender_id = settings_map.get("sender_id").toString().trim();
+		zoho.crm.setOrgVariable("kwtsms_sender_id", sender_id);
+		info "kwtsms_save_config: sender_id updated";
+	}
+	// Update default_country if provided
+	if(settings_map.containKey("default_country"))
+	{
+		default_country = settings_map.get("default_country").toString().trim();
+		// Validate: must be digits only
+		dc_clean = default_country.replaceAll("[^0-9]", "");
+		if(dc_clean.length() > 0)
+		{
+			zoho.crm.setOrgVariable("kwtsms_default_country", dc_clean);
+			info "kwtsms_save_config: default_country updated to " + dc_clean;
+		}
+		else
+		{
+			result.put("status", "ERROR");
+			result.put("error", "Invalid default_country: must contain digits");
+			return result;
+		}
+	}
+	result.put("status", "OK");
+	info "kwtsms_save_config: configuration saved successfully";
+}
+catch(e)
+{
+	info "kwtsms_save_config: error saving config: " + e;
+	result.put("status", "ERROR");
+	result.put("error", "Failed to save configuration: " + e.toString());
+}
+
+return result;

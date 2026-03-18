@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kwtSMS Settings</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://live.zwidgets.com/js-sdk/1.2/ZohoEmbeddedAppSDK.min.js"></script>
+</head>
+<body>
+    <div class="kwt-container">
+
+        <!-- Logo Bar -->
+        <div class="kwt-logo">
+            <img src="images/kwtsms-logo.png" alt="kwtSMS">
+            <span class="brand-name" data-i18n="brand_name">kwtSMS</span>
+        </div>
+
+        <!-- Test Mode Banner -->
+        <div id="test-mode-banner" class="kwt-banner warning hidden">
+            <span data-i18n="send_test_mode_warning">Test Mode is enabled. Messages will not be delivered.</span>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="kwt-status-bar">
+            <div class="kwt-status-item">
+                <span class="label" data-i18n="status_balance">Balance</span>
+                <span id="status-balance" class="value">--</span>
+            </div>
+            <div class="kwt-status-item">
+                <span class="label" data-i18n="status_sender">Sender ID</span>
+                <span id="status-sender" class="value">--</span>
+            </div>
+            <div class="kwt-status-item">
+                <span class="label" data-i18n="status_gateway">Gateway</span>
+                <span id="status-gateway-dot" class="kwt-status-dot gray"></span>
+            </div>
+            <div class="kwt-status-item">
+                <span id="status-test-badge" class="kwt-badge test-mode hidden" data-i18n="status_test_mode">Test Mode</span>
+            </div>
+            <div class="kwt-status-item">
+                <span class="label" data-i18n="status_last_sync">Last Sync</span>
+                <span id="status-last-sync" class="value">--</span>
+            </div>
+        </div>
+
+        <!-- Gateway Setup Section -->
+        <div class="kwt-section">
+            <h2 class="kwt-section-title" data-i18n="setup_title">Gateway Setup</h2>
+            <div class="kwt-form-group">
+                <label for="login-username" data-i18n="setup_username">API Username</label>
+                <input type="text" id="login-username" class="kwt-input" data-i18n-placeholder="setup_username_placeholder" placeholder="Enter your kwtSMS API username" autocomplete="username">
+            </div>
+            <div class="kwt-form-group">
+                <label for="login-password" data-i18n="setup_password">API Password</label>
+                <input type="password" id="login-password" class="kwt-input" data-i18n-placeholder="setup_password_placeholder" placeholder="Enter your kwtSMS API password" autocomplete="current-password">
+            </div>
+            <div class="kwt-form-group">
+                <button id="login-btn" class="kwt-btn kwt-btn-primary" data-i18n="setup_login">Login</button>
+            </div>
+            <div id="login-result" class="kwt-result hidden"></div>
+        </div>
+
+        <!-- Configuration Section (hidden until configured) -->
+        <div id="config-section" class="kwt-section hidden">
+            <h2 class="kwt-section-title" data-i18n="config_title">Configuration</h2>
+            <div class="kwt-form-group">
+                <label for="config-country" data-i18n="config_default_country">Default Country</label>
+                <select id="config-country" class="kwt-select">
+                    <option value="">Select country...</option>
+                </select>
+            </div>
+            <div class="kwt-form-group">
+                <label for="config-sender" data-i18n="config_sender_id">Sender ID</label>
+                <select id="config-sender" class="kwt-select">
+                    <option value="">Select sender...</option>
+                </select>
+            </div>
+            <div class="kwt-form-group">
+                <label data-i18n="config_test_mode">Test Mode</label>
+                <label class="kwt-toggle">
+                    <input type="checkbox" id="toggle-test">
+                    <span class="slider"></span>
+                    <span class="toggle-label" data-i18n="config_test_mode_desc">Messages are sent to the API but not delivered</span>
+                </label>
+            </div>
+            <div class="kwt-form-group">
+                <label data-i18n="config_gateway_enabled">Gateway Enabled</label>
+                <label class="kwt-toggle">
+                    <input type="checkbox" id="toggle-enabled">
+                    <span class="slider"></span>
+                    <span class="toggle-label" data-i18n="config_gateway_enabled_desc">Enable or disable SMS sending globally</span>
+                </label>
+            </div>
+            <div class="kwt-form-group">
+                <label data-i18n="config_debug">Debug Logging</label>
+                <label class="kwt-toggle">
+                    <input type="checkbox" id="toggle-debug">
+                    <span class="slider"></span>
+                    <span class="toggle-label" data-i18n="config_debug_desc">Log detailed request/response data</span>
+                </label>
+            </div>
+            <div class="kwt-form-group">
+                <button id="save-btn" class="kwt-btn kwt-btn-primary" data-i18n="config_save">Save</button>
+            </div>
+            <div id="save-result" class="kwt-result hidden"></div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="kwt-section">
+            <h2 class="kwt-section-title" data-i18n="help_title">Help & Support</h2>
+            <div class="kwt-help-item">
+                <h4 data-i18n="help_signup_title">Create a kwtSMS Account</h4>
+                <p data-i18n="help_signup_text">Sign up for free at kwtsms.com to get API credentials.</p>
+                <a href="https://www.kwtsms.com/register" target="_blank" data-i18n="help_link_signup">Sign Up</a>
+            </div>
+            <div class="kwt-help-item">
+                <h4 data-i18n="help_setup_title">Setup Guide</h4>
+                <p data-i18n="help_setup_text">1. Enter your API username and password above and click Login. 2. Select your sender ID and default country. 3. Enable the gateway and toggle test mode off when ready for production.</p>
+            </div>
+            <div class="kwt-help-item">
+                <h4 data-i18n="help_workflow_title">Workflow Automation</h4>
+                <p data-i18n="help_workflow_text">Create Zoho CRM workflow rules that call the kwtsms_send function to automate SMS on any CRM event.</p>
+            </div>
+            <div class="kwt-help-item">
+                <h4 data-i18n="help_dashboard_title">Message Logs & Analytics</h4>
+                <p data-i18n="help_dashboard_text">View message delivery status, logs, and analytics in your kwtSMS dashboard.</p>
+                <a href="https://www.kwtsms.com/account" target="_blank" data-i18n="help_link_dashboard">kwtSMS Dashboard</a>
+            </div>
+            <div class="kwt-help-item">
+                <h4 data-i18n="help_support_title">Support</h4>
+                <p data-i18n="help_support_text">Contact kwtSMS support for help with your account, sender IDs, or delivery issues.</p>
+                <a href="https://www.kwtsms.com/support.html" target="_blank" data-i18n="help_link_support">kwtSMS Support</a> |
+                <a href="https://www.kwtsms.com/developers.html" target="_blank" data-i18n="help_link_docs">API Documentation</a>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/settings.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+// Function: kwtsms_sync
+// Arguments: none
+// Returns: result map {"status": "OK"}, {"status": "SKIPPED"}, or {"status": "ERROR", "error": "..."}
+//
+// Refreshes cached balance, sender IDs, and coverage data from the
+// kwtSMS API. Only runs if the extension is both enabled and configured.
+
+result = Map();
+
+try
+{
+	// Step 1: Read flags and check enabled status
+	flags_raw = zoho.crm.getOrgVariable("kwtsms_flags");
+	enabled = false;
+	if(flags_raw != null && flags_raw != "" && flags_raw != "null")
+	{
+		try
+		{
+			flags = flags_raw.toMap();
+			if(flags.containKey("enabled"))
+			{
+				enabled = flags.get("enabled");
+			}
+		}
+		catch(fe)
+		{
+			info "kwtsms_sync: failed to parse flags";
+		}
+	}
+	// Check configured status
+	configured_raw = zoho.crm.getOrgVariable("kwtsms_configured");
+	configured = false;
+	if(configured_raw == "true")
+	{
+		configured = true;
+	}
+	// Step 2: If not enabled or not configured, skip
+	if(!enabled || !configured)
+	{
+		info "kwtsms_sync: skipped (enabled=" + enabled + ", configured=" + configured + ")";
+		result.put("status", "SKIPPED");
+		result.put("reason", "Extension is not enabled or not configured");
+		return result;
+	}
+	// Step 3: Read credentials
+	api_username = zoho.crm.getOrgVariable("kwtsms_username");
+	api_password = zoho.crm.getOrgVariable("kwtsms_password");
+	if(api_username == null || api_username == "" || api_password == null || api_password == "")
+	{
+		info "kwtsms_sync: no credentials found";
+		result.put("status", "ERROR");
+		result.put("error", "No credentials configured");
+		return result;
+	}
+	// Step 4: Call /balance/
+	auth_payload = Map();
+	auth_payload.put("username", api_username);
+	auth_payload.put("password", api_password);
+	balance_response = invokeurl
+	[
+		url: "https://www.kwtsms.com/API/balance/"
+		type: POST
+		parameters: auth_payload.toString()
+		content-type: "application/json"
+	];
+	balance_data = balance_response.toMap();
+	if(balance_data.containKey("error"))
+	{
+		info "kwtsms_sync: balance API error: " + balance_data.get("error");
+		result.put("status", "ERROR");
+		result.put("error", "API error: " + balance_data.get("error"));
+		return result;
+	}
+	if(balance_data.containKey("balance"))
+	{
+		zoho.crm.setOrgVariable("kwtsms_balance", balance_data.get("balance").toString());
+		info "kwtsms_sync: balance updated";
+	}
+	// Step 5: Call /senderid/
+	try
+	{
+		senderid_response = invokeurl
+		[
+			url: "https://www.kwtsms.com/API/senderid/"
+			type: POST
+			parameters: auth_payload.toString()
+			content-type: "application/json"
+		];
+		senderid_data = senderid_response.toMap();
+		if(senderid_data.containKey("senderid"))
+		{
+			zoho.crm.setOrgVariable("kwtsms_senderids_json", senderid_data.get("senderid").toString());
+			info "kwtsms_sync: sender IDs updated";
+		}
+	}
+	catch(se)
+	{
+		info "kwtsms_sync: failed to sync sender IDs: " + se;
+	}
+	// Step 6: Call /coverage/
+	try
+	{
+		coverage_response = invokeurl
+		[
+			url: "https://www.kwtsms.com/API/coverage/"
+			type: POST
+			parameters: auth_payload.toString()
+			content-type: "application/json"
+		];
+		coverage_data = coverage_response.toMap();
+		if(coverage_data.containKey("coverage"))
+		{
+			zoho.crm.setOrgVariable("kwtsms_coverage_json", coverage_data.get("coverage").toString());
+			info "kwtsms_sync: coverage data updated";
+		}
+	}
+	catch(ce)
+	{
+		info "kwtsms_sync: failed to sync coverage: " + ce;
+	}
+	// Step 7: Update last sync timestamp (UTC ISO format)
+	now_utc = zoho.currenttime.toString("yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC");
+	zoho.crm.setOrgVariable("kwtsms_last_sync", now_utc);
+	result.put("status", "OK");
+	info "kwtsms_sync: sync completed successfully";
+}
+catch(e)
+{
+	info "kwtsms_sync: sync failed: " + e;
+	result.put("status", "ERROR");
+	result.put("error", "Sync failed: " + e.toString());
+}
+
+return result;

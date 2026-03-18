@@ -1,0 +1,130 @@
+// Function: kwtsms_login
+// Arguments: username (string), password (string)
+// Returns: result map {"status": "OK", "balance": N} or {"status": "ERROR", "error": "..."}
+//
+// Validates credentials against the kwtSMS API, then caches balance,
+// sender IDs, and coverage data in org variables.
+
+result = Map();
+
+try
+{
+	// Step 1: Validate credentials by calling /balance/
+	balance_payload = Map();
+	balance_payload.put("username", username);
+	balance_payload.put("password", password);
+	info "kwtsms_login: attempting login (credentials masked)";
+	balance_response = invokeurl
+	[
+		url: "https://www.kwtsms.com/API/balance/"
+		type: POST
+		parameters: balance_payload.toString()
+		content-type: "application/json"
+	];
+	info "kwtsms_login: balance API response received";
+	// Parse balance response
+	balance_data = balance_response.toMap();
+	// Check for error in response
+	if(balance_data.containKey("error"))
+	{
+		info "kwtsms_login: API returned error: " + balance_data.get("error");
+		// Do NOT save credentials on error
+		zoho.crm.setOrgVariable("kwtsms_configured", "false");
+		result.put("status", "ERROR");
+		result.put("error", "Invalid credentials");
+		return result;
+	}
+	// Extract balance value
+	balance = 0;
+	if(balance_data.containKey("balance"))
+	{
+		balance = balance_data.get("balance");
+	}
+	// Step 2: Save credentials to org variables
+	zoho.crm.setOrgVariable("kwtsms_username", username);
+	zoho.crm.setOrgVariable("kwtsms_password", password);
+	zoho.crm.setOrgVariable("kwtsms_balance", balance.toString());
+	info "kwtsms_login: credentials saved, balance = " + balance;
+	// Step 3: Fetch sender IDs
+	senderid_payload = Map();
+	senderid_payload.put("username", username);
+	senderid_payload.put("password", password);
+	try
+	{
+		senderid_response = invokeurl
+		[
+			url: "https://www.kwtsms.com/API/senderid/"
+			type: POST
+			parameters: senderid_payload.toString()
+			content-type: "application/json"
+		];
+		// The senderid API returns a list of sender IDs
+		senderid_data = senderid_response.toMap();
+		if(senderid_data.containKey("senderid"))
+		{
+			senderids = senderid_data.get("senderid");
+			zoho.crm.setOrgVariable("kwtsms_senderids_json", senderids.toString());
+			info "kwtsms_login: sender IDs cached";
+		}
+	}
+	catch(se)
+	{
+		info "kwtsms_login: failed to fetch sender IDs: " + se;
+		// Non-fatal, continue with login
+	}
+	// Step 4: Fetch coverage data
+	coverage_payload = Map();
+	coverage_payload.put("username", username);
+	coverage_payload.put("password", password);
+	try
+	{
+		coverage_response = invokeurl
+		[
+			url: "https://www.kwtsms.com/API/coverage/"
+			type: POST
+			parameters: coverage_payload.toString()
+			content-type: "application/json"
+		];
+		coverage_data = coverage_response.toMap();
+		if(coverage_data.containKey("coverage"))
+		{
+			coverage = coverage_data.get("coverage");
+			zoho.crm.setOrgVariable("kwtsms_coverage_json", coverage.toString());
+			info "kwtsms_login: coverage data cached";
+		}
+	}
+	catch(ce)
+	{
+		info "kwtsms_login: failed to fetch coverage: " + ce;
+		// Non-fatal, continue with login
+	}
+	// Step 5: Mark as configured and record sync time
+	zoho.crm.setOrgVariable("kwtsms_configured", "true");
+	// Set initial flags if not already set
+	flags_raw = zoho.crm.getOrgVariable("kwtsms_flags");
+	if(flags_raw == null || flags_raw == "" || flags_raw == "null")
+	{
+		initial_flags = Map();
+		initial_flags.put("enabled", false);
+		initial_flags.put("test_mode", true);
+		initial_flags.put("debug", false);
+		zoho.crm.setOrgVariable("kwtsms_flags", initial_flags.toString());
+	}
+	// Record last sync in UTC ISO format
+	now_utc = zoho.currenttime.toString("yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC");
+	zoho.crm.setOrgVariable("kwtsms_last_sync", now_utc);
+	// Step 6: Return success
+	result.put("status", "OK");
+	result.put("balance", balance);
+	info "kwtsms_login: login successful";
+}
+catch(e)
+{
+	info "kwtsms_login: login failed with exception: " + e;
+	// Do NOT save credentials on error
+	zoho.crm.setOrgVariable("kwtsms_configured", "false");
+	result.put("status", "ERROR");
+	result.put("error", "Invalid credentials");
+}
+
+return result;

@@ -1,0 +1,101 @@
+// Function: kwtsms_normalize
+// Arguments: mobile (string), default_country (string)
+// Returns: normalized phone number string (digits only, international format)
+//
+// Normalizes a phone number by converting Arabic/Persian digits,
+// stripping non-digits, removing leading zeros/00, and prepending
+// the default country code when needed.
+
+// Step 1: Convert Arabic-Indic digits (U+0660..U+0669) to Latin
+normalized = mobile.replaceAll("٠", "0");
+normalized = normalized.replaceAll("١", "1");
+normalized = normalized.replaceAll("٢", "2");
+normalized = normalized.replaceAll("٣", "3");
+normalized = normalized.replaceAll("٤", "4");
+normalized = normalized.replaceAll("٥", "5");
+normalized = normalized.replaceAll("٦", "6");
+normalized = normalized.replaceAll("٧", "7");
+normalized = normalized.replaceAll("٨", "8");
+normalized = normalized.replaceAll("٩", "9");
+
+// Convert Extended Arabic-Indic / Persian digits (U+06F0..U+06F9)
+normalized = normalized.replaceAll("۰", "0");
+normalized = normalized.replaceAll("۱", "1");
+normalized = normalized.replaceAll("۲", "2");
+normalized = normalized.replaceAll("۳", "3");
+normalized = normalized.replaceAll("۴", "4");
+normalized = normalized.replaceAll("۵", "5");
+normalized = normalized.replaceAll("۶", "6");
+normalized = normalized.replaceAll("۷", "7");
+normalized = normalized.replaceAll("۸", "8");
+normalized = normalized.replaceAll("۹", "9");
+
+// Step 2: Strip all non-digit characters
+normalized = normalized.replaceAll("[^0-9]", "");
+
+// Step 3: Strip leading "00" (international dialing prefix)
+if(normalized.startsWith("00"))
+{
+	normalized = normalized.removeFirstOccurrence("00");
+}
+// Step 4: Strip single leading "0" (local format like 0575948372)
+else if(normalized.startsWith("0"))
+{
+	normalized = normalized.removeFirstOccurrence("0");
+}
+
+// Step 5: If too short to be international, prepend default country
+if(normalized.length() < 8)
+{
+	normalized = default_country + normalized;
+}
+
+// Step 6: Check if number starts with any known coverage prefix
+// Load coverage from org variable
+coverage_raw = zoho.crm.getOrgVariable("kwtsms_coverage_json");
+has_coverage_match = false;
+if(coverage_raw != null && coverage_raw != "" && coverage_raw != "null")
+{
+	try
+	{
+		coverage_list = coverage_raw.toJSONList();
+		// Sort by length descending (longest prefix first) for best match
+		// Deluge has no built-in sort, so we check longest first manually
+		// by iterating multiple passes: first check prefixes of length >= 4,
+		// then >= 3, then >= 2, then >= 1
+		for each  prefix in coverage_list
+		{
+			p = prefix.replaceAll("\"", "").trim();
+			if(p != "" && normalized.startsWith(p))
+			{
+				has_coverage_match = true;
+				break;
+			}
+		}
+	}
+	catch(e)
+	{
+		// Coverage JSON invalid, skip prefix matching
+		info "kwtsms_normalize: failed to parse coverage JSON: " + e;
+	}
+}
+
+// Step 7: If no coverage prefix matched, prepend default country code
+if(!has_coverage_match)
+{
+	// Only prepend if the number doesn't already start with default_country
+	if(!normalized.startsWith(default_country))
+	{
+		normalized = default_country + normalized;
+	}
+}
+
+// Mask for logging (show only last 4 digits)
+if(normalized.length() > 4)
+{
+	masked = "***" + normalized.subString(normalized.length() - 4, normalized.length());
+	info "kwtsms_normalize: normalized to " + masked;
+}
+
+// Step 8: Return digits-only string
+return normalized;

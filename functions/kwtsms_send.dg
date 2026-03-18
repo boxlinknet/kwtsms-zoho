@@ -1,0 +1,538 @@
+// Function: kwtsms_send
+// Arguments: mobile (string - comma-separated), message (string), sender_id (string)
+// Returns: result map with status, msg_id, numbers count, and balance
+//
+// Main SMS send function. Normalizes numbers, cleans message, validates
+// constraints, chunks into batches of 200, and calls the kwtSMS send API.
+
+result = Map();
+
+try
+{
+	// =========================================================
+	// Step 1: Read flags and check enabled/configured
+	// =========================================================
+	flags_raw = zoho.crm.getOrgVariable("kwtsms_flags");
+	enabled = false;
+	test_mode = true;
+	debug_mode = false;
+	if(flags_raw != null && flags_raw != "" && flags_raw != "null")
+	{
+		try
+		{
+			flags = flags_raw.toMap();
+			if(flags.containKey("enabled"))
+			{
+				enabled = flags.get("enabled");
+			}
+			if(flags.containKey("test_mode"))
+			{
+				test_mode = flags.get("test_mode");
+			}
+			if(flags.containKey("debug"))
+			{
+				debug_mode = flags.get("debug");
+			}
+		}
+		catch(fe)
+		{
+			info "kwtsms_send: failed to parse flags";
+		}
+	}
+	if(!enabled)
+	{
+		result.put("status", "ERROR");
+		result.put("error", "SMS sending is not enabled. Enable it in settings.");
+		info "kwtsms_send: aborted, not enabled";
+		return result;
+	}
+	configured_raw = zoho.crm.getOrgVariable("kwtsms_configured");
+	if(configured_raw != "true")
+	{
+		result.put("status", "ERROR");
+		result.put("error", "Extension is not configured. Please login first.");
+		info "kwtsms_send: aborted, not configured";
+		return result;
+	}
+	// =========================================================
+	// Step 2: Read config org variables
+	// =========================================================
+	default_country = zoho.crm.getOrgVariable("kwtsms_default_country");
+	if(default_country == null || default_country == "" || default_country == "null")
+	{
+		default_country = "965";
+	}
+	coverage_raw = zoho.crm.getOrgVariable("kwtsms_coverage_json");
+	coverage_list = List();
+	if(coverage_raw != null && coverage_raw != "" && coverage_raw != "null")
+	{
+		try
+		{
+			coverage_list = coverage_raw.toJSONList();
+		}
+		catch(ce)
+		{
+			info "kwtsms_send: failed to parse coverage JSON";
+		}
+	}
+	balance_raw = zoho.crm.getOrgVariable("kwtsms_balance");
+	current_balance = 0;
+	if(balance_raw != null && balance_raw != "" && balance_raw != "null")
+	{
+		try
+		{
+			current_balance = balance_raw.toDecimal();
+		}
+		catch(be)
+		{
+			current_balance = 0;
+		}
+	}
+	// =========================================================
+	// Step 3: Normalize phone numbers (inline)
+	// =========================================================
+	raw_numbers = mobile.toList(",");
+	normalized_list = List();
+	for each  raw in raw_numbers
+	{
+		num = raw.trim();
+		if(num == "")
+		{
+			continue;
+		}
+		// Convert Arabic-Indic digits
+		num = num.replaceAll("٠", "0");
+		num = num.replaceAll("١", "1");
+		num = num.replaceAll("٢", "2");
+		num = num.replaceAll("٣", "3");
+		num = num.replaceAll("٤", "4");
+		num = num.replaceAll("٥", "5");
+		num = num.replaceAll("٦", "6");
+		num = num.replaceAll("٧", "7");
+		num = num.replaceAll("٨", "8");
+		num = num.replaceAll("٩", "9");
+		// Convert Extended Arabic-Indic / Persian digits
+		num = num.replaceAll("۰", "0");
+		num = num.replaceAll("۱", "1");
+		num = num.replaceAll("۲", "2");
+		num = num.replaceAll("۳", "3");
+		num = num.replaceAll("۴", "4");
+		num = num.replaceAll("۵", "5");
+		num = num.replaceAll("۶", "6");
+		num = num.replaceAll("۷", "7");
+		num = num.replaceAll("۸", "8");
+		num = num.replaceAll("۹", "9");
+		// Strip non-digits
+		num = num.replaceAll("[^0-9]", "");
+		// Strip leading "00"
+		if(num.startsWith("00"))
+		{
+			num = num.removeFirstOccurrence("00");
+		}
+		else if(num.startsWith("0"))
+		{
+			num = num.removeFirstOccurrence("0");
+		}
+		// If too short, prepend default country
+		if(num.length() < 8)
+		{
+			num = default_country + num;
+		}
+		// Check coverage prefix
+		has_match = false;
+		for each  prefix in coverage_list
+		{
+			p = prefix.replaceAll("\"", "").trim();
+			if(p != "" && num.startsWith(p))
+			{
+				has_match = true;
+				break;
+			}
+		}
+		if(!has_match && !num.startsWith(default_country))
+		{
+			num = default_country + num;
+		}
+		normalized_list.add(num);
+	}
+	// =========================================================
+	// Step 4: Deduplicate
+	// =========================================================
+	unique_numbers = List();
+	seen_set = Map();
+	for each  n in normalized_list
+	{
+		if(!seen_set.containKey(n))
+		{
+			seen_set.put(n, true);
+			unique_numbers.add(n);
+		}
+	}
+	if(unique_numbers.isEmpty())
+	{
+		result.put("status", "ERROR");
+		result.put("error", "No valid phone numbers provided");
+		info "kwtsms_send: aborted, no valid numbers";
+		return result;
+	}
+	// =========================================================
+	// Step 5: Filter by coverage
+	// =========================================================
+	covered_numbers = List();
+	uncovered_count = 0;
+	if(coverage_list.isEmpty())
+	{
+		// No coverage data, send all numbers
+		covered_numbers = unique_numbers;
+	}
+	else
+	{
+		for each  num in unique_numbers
+		{
+			is_covered = false;
+			for each  prefix in coverage_list
+			{
+				p = prefix.replaceAll("\"", "").trim();
+				if(p != "" && num.startsWith(p))
+				{
+					is_covered = true;
+					break;
+				}
+			}
+			if(is_covered)
+			{
+				covered_numbers.add(num);
+			}
+			else
+			{
+				uncovered_count = uncovered_count + 1;
+			}
+		}
+	}
+	if(covered_numbers.isEmpty())
+	{
+		result.put("status", "ERROR");
+		result.put("error", "No numbers have coverage. " + uncovered_count + " numbers filtered out.");
+		info "kwtsms_send: aborted, no coverage for any number";
+		return result;
+	}
+	// =========================================================
+	// Step 6: Clean message (inline)
+	// =========================================================
+	cleaned = message;
+	// Strip HTML tags
+	cleaned = cleaned.replaceAll("<[^>]*>", "");
+	// Decode HTML entities
+	cleaned = cleaned.replaceAll("&amp;", "&");
+	cleaned = cleaned.replaceAll("&lt;", "<");
+	cleaned = cleaned.replaceAll("&gt;", ">");
+	cleaned = cleaned.replaceAll("&quot;", "\"");
+	cleaned = cleaned.replaceAll("&#39;", "'");
+	cleaned = cleaned.replaceAll("&nbsp;", " ");
+	// Strip emoji ranges
+	cleaned = cleaned.replaceAll("[\\x{1F600}-\\x{1F64F}]", "");
+	cleaned = cleaned.replaceAll("[\\x{1F300}-\\x{1F5FF}]", "");
+	cleaned = cleaned.replaceAll("[\\x{1F680}-\\x{1F6FF}]", "");
+	cleaned = cleaned.replaceAll("[\\x{1F900}-\\x{1F9FF}]", "");
+	cleaned = cleaned.replaceAll("[\\x{1FA00}-\\x{1FAFF}]", "");
+	cleaned = cleaned.replaceAll("[\\x{2702}-\\x{27B0}]", "");
+	cleaned = cleaned.replaceAll("[\\x{FE00}-\\x{FE0F}]", "");
+	cleaned = cleaned.replaceAll("[\\x{2600}-\\x{26FF}]", "");
+	cleaned = cleaned.replaceAll("[\\x{2300}-\\x{23FF}]", "");
+	// Strip hidden control characters
+	cleaned = cleaned.replaceAll("\\x{200B}", "");
+	cleaned = cleaned.replaceAll("\\x{FEFF}", "");
+	cleaned = cleaned.replaceAll("\\x{00AD}", "");
+	cleaned = cleaned.replaceAll("\\x{200C}", "");
+	cleaned = cleaned.replaceAll("\\x{200D}", "");
+	cleaned = cleaned.replaceAll("\\x{200E}", "");
+	cleaned = cleaned.replaceAll("\\x{200F}", "");
+	cleaned = cleaned.replaceAll("\\x{202A}", "");
+	cleaned = cleaned.replaceAll("\\x{202B}", "");
+	cleaned = cleaned.replaceAll("\\x{202C}", "");
+	// Convert Arabic-Indic digits
+	cleaned = cleaned.replaceAll("٠", "0");
+	cleaned = cleaned.replaceAll("١", "1");
+	cleaned = cleaned.replaceAll("٢", "2");
+	cleaned = cleaned.replaceAll("٣", "3");
+	cleaned = cleaned.replaceAll("٤", "4");
+	cleaned = cleaned.replaceAll("٥", "5");
+	cleaned = cleaned.replaceAll("٦", "6");
+	cleaned = cleaned.replaceAll("٧", "7");
+	cleaned = cleaned.replaceAll("٨", "8");
+	cleaned = cleaned.replaceAll("٩", "9");
+	cleaned = cleaned.replaceAll("۰", "0");
+	cleaned = cleaned.replaceAll("۱", "1");
+	cleaned = cleaned.replaceAll("۲", "2");
+	cleaned = cleaned.replaceAll("۳", "3");
+	cleaned = cleaned.replaceAll("۴", "4");
+	cleaned = cleaned.replaceAll("۵", "5");
+	cleaned = cleaned.replaceAll("۶", "6");
+	cleaned = cleaned.replaceAll("۷", "7");
+	cleaned = cleaned.replaceAll("۸", "8");
+	cleaned = cleaned.replaceAll("۹", "9");
+	// Trim and collapse spaces
+	cleaned = cleaned.trim();
+	cleaned = cleaned.replaceAll("  +", " ");
+	// =========================================================
+	// Step 7: Validate message not empty
+	// =========================================================
+	if(cleaned == "" || cleaned.length() == 0)
+	{
+		result.put("status", "ERROR");
+		result.put("error", "Message is empty after cleaning");
+		info "kwtsms_send: aborted, empty message";
+		return result;
+	}
+	// =========================================================
+	// Step 8: Check message length limits
+	// =========================================================
+	// Detect if message contains Arabic/Unicode characters
+	// If any non-ASCII character remains, treat as Unicode
+	ascii_only = cleaned.replaceAll("[\\x{0000}-\\x{007F}]", "");
+	is_unicode = false;
+	if(ascii_only.length() > 0)
+	{
+		is_unicode = true;
+	}
+	if(is_unicode)
+	{
+		// Unicode: max 7 pages * 67 chars + first page 70 = 70 + 6*67 = 472
+		if(cleaned.length() > 472)
+		{
+			result.put("status", "ERROR");
+			result.put("error", "Message too long: " + cleaned.length() + " Unicode characters (max 472)");
+			info "kwtsms_send: aborted, message too long (unicode)";
+			return result;
+		}
+	}
+	else
+	{
+		// English: max 7 pages * 153 chars + first page 160 = 160 + 6*153 = 1078
+		// Using the spec value of 1071
+		if(cleaned.length() > 1071)
+		{
+			result.put("status", "ERROR");
+			result.put("error", "Message too long: " + cleaned.length() + " characters (max 1071)");
+			info "kwtsms_send: aborted, message too long (english)";
+			return result;
+		}
+	}
+	// =========================================================
+	// Step 9: Check balance
+	// =========================================================
+	if(current_balance <= 0)
+	{
+		result.put("status", "ERROR");
+		result.put("error", "Insufficient balance. Current balance: " + current_balance);
+		info "kwtsms_send: aborted, insufficient balance";
+		return result;
+	}
+	// =========================================================
+	// Step 10: Determine sender ID
+	// =========================================================
+	final_sender_id = sender_id;
+	if(final_sender_id == null || final_sender_id.trim() == "")
+	{
+		final_sender_id = zoho.crm.getOrgVariable("kwtsms_sender_id");
+	}
+	if(final_sender_id == null || final_sender_id.trim() == "" || final_sender_id == "null")
+	{
+		result.put("status", "ERROR");
+		result.put("error", "No sender ID specified. Set a default in settings or pass one explicitly.");
+		info "kwtsms_send: aborted, no sender ID";
+		return result;
+	}
+	final_sender_id = final_sender_id.trim();
+	// =========================================================
+	// Step 11: Read credentials
+	// =========================================================
+	api_username = zoho.crm.getOrgVariable("kwtsms_username");
+	api_password = zoho.crm.getOrgVariable("kwtsms_password");
+	if(api_username == null || api_username == "" || api_password == null || api_password == "")
+	{
+		result.put("status", "ERROR");
+		result.put("error", "No credentials configured. Please login first.");
+		info "kwtsms_send: aborted, no credentials";
+		return result;
+	}
+	// =========================================================
+	// Step 12: Chunk into batches of 200
+	// =========================================================
+	total_numbers = covered_numbers.size();
+	batches = List();
+	current_batch = List();
+	batch_count = 0;
+	for each  num in covered_numbers
+	{
+		current_batch.add(num);
+		if(current_batch.size() == 200)
+		{
+			batches.add(current_batch);
+			current_batch = List();
+			batch_count = batch_count + 1;
+		}
+	}
+	// Add remaining numbers as final batch
+	if(!current_batch.isEmpty())
+	{
+		batches.add(current_batch);
+		batch_count = batch_count + 1;
+	}
+	info "kwtsms_send: sending to " + total_numbers + " numbers in " + batch_count + " batch(es)";
+	// =========================================================
+	// Step 13: Send each batch
+	// =========================================================
+	last_msg_id = "";
+	last_balance = current_balance;
+	total_sent = 0;
+	batch_errors = List();
+	for each  batch in batches
+	{
+		// Build comma-separated mobile string for this batch
+		batch_mobile = "";
+		for each  bnum in batch
+		{
+			if(batch_mobile != "")
+			{
+				batch_mobile = batch_mobile + ",";
+			}
+			batch_mobile = batch_mobile + bnum;
+		}
+		// Build send payload
+		send_payload = Map();
+		send_payload.put("username", api_username);
+		send_payload.put("password", api_password);
+		send_payload.put("sender", final_sender_id);
+		send_payload.put("mobile", batch_mobile);
+		send_payload.put("message", cleaned);
+		// Apply test mode flag (always include, per PRD)
+		if(test_mode)
+		{
+			send_payload.put("test", "1");
+		}
+		else
+		{
+			send_payload.put("test", "0");
+		}
+		try
+		{
+			send_response = invokeurl
+			[
+				url: "https://www.kwtsms.com/API/send/"
+				type: POST
+				parameters: send_payload.toString()
+				content-type: "application/json"
+			];
+			send_data = send_response.toMap();
+			// Check for errors
+			if(send_data.containKey("error"))
+			{
+				error_code = send_data.get("error").toString();
+				// ERR003: wrong credentials - set configured=false
+				if(error_code.contains("ERR003"))
+				{
+					zoho.crm.setOrgVariable("kwtsms_configured", "false");
+					result.put("status", "ERROR");
+					result.put("error", "Authentication failed. Please re-login in Settings.");
+					info "kwtsms_send: ERR003 - credentials invalid, setting configured=false";
+					return result;
+				}
+				// ERR010/ERR011: balance errors - update balance to 0
+				if(error_code.contains("ERR010") || error_code.contains("ERR011"))
+				{
+					zoho.crm.setOrgVariable("kwtsms_balance", "0");
+					result.put("status", "ERROR");
+					result.put("error", "Insufficient balance");
+					info "kwtsms_send: " + error_code + " - balance set to 0";
+					return result;
+				}
+				// ERR013: queue full - return with batch count
+				if(error_code.contains("ERR013"))
+				{
+					result.put("status", "ERROR");
+					result.put("error", "Send queue is full. Sent " + total_sent + " numbers before failure.");
+					info "kwtsms_send: ERR013 at batch, sent " + total_sent + " so far";
+					return result;
+				}
+				// ERR028: 15s cooldown
+				if(error_code.contains("ERR028"))
+				{
+					result.put("status", "ERROR");
+					result.put("error", "Please wait 15 seconds before sending to this number again.");
+					info "kwtsms_send: ERR028 - cooldown";
+					return result;
+				}
+				batch_errors.add("Batch error: " + error_code);
+				info "kwtsms_send: batch error: " + error_code;
+			}
+			else
+			{
+				// Success: extract msg_id and balance-after
+				if(send_data.containKey("MSGID"))
+				{
+					last_msg_id = send_data.get("MSGID").toString();
+				}
+				if(send_data.containKey("balance-after"))
+				{
+					last_balance = send_data.get("balance-after");
+				}
+				else if(send_data.containKey("balance"))
+				{
+					last_balance = send_data.get("balance");
+				}
+				total_sent = total_sent + batch.size();
+			}
+		}
+		catch(se)
+		{
+			batch_errors.add("Batch exception: " + se.toString());
+			info "kwtsms_send: batch send exception: " + se;
+		}
+	}
+	// =========================================================
+	// Step 14: Update balance from last successful response
+	// =========================================================
+	zoho.crm.setOrgVariable("kwtsms_balance", last_balance.toString());
+	// =========================================================
+	// Step 15: Build final result
+	// =========================================================
+	if(total_sent > 0)
+	{
+		result.put("status", "OK");
+		result.put("msg_id", last_msg_id);
+		result.put("numbers", total_sent);
+		result.put("balance", last_balance);
+		if(uncovered_count > 0)
+		{
+			result.put("uncovered_filtered", uncovered_count);
+		}
+		if(!batch_errors.isEmpty())
+		{
+			result.put("partial_errors", batch_errors);
+		}
+		if(test_mode)
+		{
+			result.put("test_mode", true);
+		}
+		info "kwtsms_send: sent to " + total_sent + " numbers, msg_id=" + last_msg_id;
+	}
+	else
+	{
+		result.put("status", "ERROR");
+		result.put("error", "All batches failed");
+		if(!batch_errors.isEmpty())
+		{
+			result.put("errors", batch_errors);
+		}
+		info "kwtsms_send: all batches failed";
+	}
+}
+catch(e)
+{
+	info "kwtsms_send: send failed with exception: " + e;
+	result.put("status", "ERROR");
+	result.put("error", "Send failed: " + e.toString());
+}
+
+return result;

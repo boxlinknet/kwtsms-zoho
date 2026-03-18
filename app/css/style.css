@@ -1,0 +1,433 @@
+/* kwtSMS for Zoho CRM - Shared Styles
+   Brand: kwtsms_branding.json
+   Primary: #FFA200 | Accent: #79CCF2 | Text: #434345 | BG: #FFFFFF
+   Fonts: Montserrat (headings), Lato (body)
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Montserrat:wght@500;600;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap');
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Lato', 'Helvetica', 'Arial', sans-serif;
+  color: #434345;
+  background: #FFFFFF;
+  line-height: 1.5;
+  padding: 16px;
+}
+
+/* ── Typography ── */
+h1, h2, h3, h4 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  color: #2c2c2e;
+}
+
+h1 { font-size: 1.5rem; margin-bottom: 8px; }
+h2 { font-size: 1.25rem; margin-bottom: 8px; }
+h3 { font-size: 1.1rem; margin-bottom: 4px; }
+
+a {
+  color: #79CCF2;
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* ── Layout ── */
+.kwt-container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.kwt-section {
+  background: #FAFAFA;
+  border: 1px solid #E8E8E8;
+  border-radius: 4px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.kwt-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+/* ── Status Bar ── */
+.kwt-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 20px;
+  background: #F5F5F5;
+  border: 1px solid #E0E0E0;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.kwt-status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+}
+
+.kwt-status-item .label {
+  color: #888;
+  font-weight: 400;
+}
+
+.kwt-status-item .value {
+  font-weight: 700;
+}
+
+.kwt-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.kwt-status-dot.green  { background: #34C759; }
+.kwt-status-dot.yellow { background: #FF9500; }
+.kwt-status-dot.red    { background: #FF3B30; }
+.kwt-status-dot.gray   { background: #C7C7CC; }
+
+/* ── Balance colors ── */
+.balance-ok    { color: #34C759; }
+.balance-low   { color: #FF9500; }
+.balance-zero  { color: #FF3B30; }
+
+/* ── Badges ── */
+.kwt-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kwt-badge.test-mode {
+  background: #FFF3CD;
+  color: #856404;
+  border: 1px solid #FFEEBA;
+}
+
+.kwt-badge.enabled {
+  background: #D4EDDA;
+  color: #155724;
+  border: 1px solid #C3E6CB;
+}
+
+.kwt-badge.disabled {
+  background: #F8D7DA;
+  color: #721C24;
+  border: 1px solid #F5C6CB;
+}
+
+/* ── Forms ── */
+.kwt-form-group {
+  margin-bottom: 14px;
+}
+
+.kwt-form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.kwt-input,
+.kwt-select,
+.kwt-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #CED4DA;
+  border-radius: 0;
+  background: #FFFFFF;
+  color: #212121;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease;
+}
+
+.kwt-input:focus,
+.kwt-select:focus,
+.kwt-textarea:focus {
+  outline: none;
+  border-color: #FFA200;
+  box-shadow: 0 0 0 2px rgba(255, 162, 0, 0.15);
+}
+
+.kwt-input:disabled,
+.kwt-select:disabled,
+.kwt-textarea:disabled {
+  background: #F0F0F0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.kwt-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.kwt-select {
+  cursor: pointer;
+  appearance: auto;
+}
+
+/* ── Buttons ── */
+.kwt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 4px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.kwt-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kwt-btn-primary {
+  background: #FFA200;
+  color: #FFFFFF;
+}
+
+.kwt-btn-primary:hover:not(:disabled) {
+  background: #E89200;
+}
+
+.kwt-btn-secondary {
+  background: #E8E8E8;
+  color: #434345;
+}
+
+.kwt-btn-secondary:hover:not(:disabled) {
+  background: #D8D8D8;
+}
+
+.kwt-btn-sm {
+  padding: 5px 12px;
+  font-size: 0.8rem;
+}
+
+/* ── Toggle Switch ── */
+.kwt-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.kwt-toggle input {
+  display: none;
+}
+
+.kwt-toggle .slider {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background: #CCC;
+  border-radius: 11px;
+  transition: background 0.2s ease;
+}
+
+.kwt-toggle .slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: #FFF;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.kwt-toggle input:checked + .slider {
+  background: #FFA200;
+}
+
+.kwt-toggle input:checked + .slider::after {
+  transform: translateX(18px);
+}
+
+.kwt-toggle .toggle-label {
+  font-size: 0.875rem;
+  color: #555;
+}
+
+/* ── Banners / Alerts ── */
+.kwt-banner {
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.kwt-banner.warning {
+  background: #FFF3CD;
+  color: #856404;
+  border: 1px solid #FFEEBA;
+}
+
+.kwt-banner.error {
+  background: #F8D7DA;
+  color: #721C24;
+  border: 1px solid #F5C6CB;
+}
+
+.kwt-banner.success {
+  background: #D4EDDA;
+  color: #155724;
+  border: 1px solid #C3E6CB;
+}
+
+.kwt-banner.info {
+  background: #D1ECF1;
+  color: #0C5460;
+  border: 1px solid #BEE5EB;
+}
+
+/* ── Character Counter ── */
+.kwt-char-counter {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 4px;
+}
+
+.kwt-char-counter.exceeded {
+  color: #FF3B30;
+  font-weight: 700;
+}
+
+/* ── Result Area ── */
+.kwt-result {
+  padding: 12px 16px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  display: none;
+}
+
+.kwt-result.visible { display: block; }
+.kwt-result.success { background: #D4EDDA; color: #155724; border: 1px solid #C3E6CB; }
+.kwt-result.error   { background: #F8D7DA; color: #721C24; border: 1px solid #F5C6CB; }
+
+.kwt-result .result-detail {
+  font-size: 0.8rem;
+  margin-top: 4px;
+  opacity: 0.85;
+}
+
+/* ── Spinner ── */
+.kwt-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 162, 0, 0.3);
+  border-top-color: #FFA200;
+  border-radius: 50%;
+  animation: kwt-spin 0.6s linear infinite;
+}
+
+@keyframes kwt-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Help Section ── */
+.kwt-help-item {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #EEE;
+}
+
+.kwt-help-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.kwt-help-item h4 {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.kwt-help-item p {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.kwt-help-item code {
+  background: #F0F0F0;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.82rem;
+}
+
+/* ── Logo ── */
+.kwt-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.kwt-logo img {
+  height: 32px;
+  width: auto;
+}
+
+.kwt-logo .brand-name {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #FFA200;
+}
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+.mt-4 { margin-top: 4px; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.text-sm { font-size: 0.85rem; }
+.text-muted { color: #888; }
+.text-center { text-align: center; }
+.flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.gap-8 { gap: 8px; }
+.gap-16 { gap: 16px; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
