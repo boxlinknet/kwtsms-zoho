@@ -139,6 +139,13 @@
             return;
         }
 
+        // Validate phone number
+        var normalized = normalizePhone(recipient);
+        if (!normalized || validatePhone(normalized) !== null) {
+            els.sendBtn.disabled = true;
+            return;
+        }
+
         var stats = SmsCounter.count(text);
         if (stats.exceeded) {
             els.sendBtn.disabled = true;
@@ -193,24 +200,26 @@
         }
     }
 
-    /**
-     * Client-side normalization preview.
-     * Mirrors the logic in kwtsms_normalize.dg for user feedback.
-     * Actual normalization happens server-side in kwtsms_send.
-     */
-    function normalizePreview() {
-        var raw = els.recipient.value;
+    // Arabic-Indic and Persian digit map
+    var ARABIC_DIGIT_MAP = {
+        '\u0660':'0','\u0661':'1','\u0662':'2','\u0663':'3','\u0664':'4',
+        '\u0665':'5','\u0666':'6','\u0667':'7','\u0668':'8','\u0669':'9',
+        '\u06F0':'0','\u06F1':'1','\u06F2':'2','\u06F3':'3','\u06F4':'4',
+        '\u06F5':'5','\u06F6':'6','\u06F7':'7','\u06F8':'8','\u06F9':'9'
+    };
 
-        // Convert Arabic-Indic and Persian digits to Latin
-        var arabicMap = {
-            '\u0660':'0','\u0661':'1','\u0662':'2','\u0663':'3','\u0664':'4',
-            '\u0665':'5','\u0666':'6','\u0667':'7','\u0668':'8','\u0669':'9',
-            '\u06F0':'0','\u06F1':'1','\u06F2':'2','\u06F3':'3','\u06F4':'4',
-            '\u06F5':'5','\u06F6':'6','\u06F7':'7','\u06F8':'8','\u06F9':'9'
-        };
+    /**
+     * Normalize a phone number to international digits-only format.
+     * Mirrors the logic in kwtsms_normalize.dg.
+     * Returns the normalized string, or empty string if invalid.
+     */
+    function normalizePhone(raw) {
+        if (!raw) return '';
+
+        // Convert Arabic/Persian digits to Latin
         var converted = '';
         for (var i = 0; i < raw.length; i++) {
-            converted += arabicMap[raw[i]] || raw[i];
+            converted += ARABIC_DIGIT_MAP[raw[i]] || raw[i];
         }
 
         // Strip non-digits
@@ -221,30 +230,89 @@
             digits = digits.substring(2);
         }
 
-        // Strip single leading 0
+        // Strip single leading 0 (local format like 0575948372)
         if (digits.length > 0 && digits.charAt(0) === '0') {
             digits = digits.substring(1);
         }
 
-        // Prepend default country if number looks local (< 8 digits or doesn't start with known prefix)
-        if (digits && config.default_country) {
-            var hasPrefix = false;
-            if (config.coverage && Array.isArray(config.coverage)) {
-                for (var j = 0; j < config.coverage.length; j++) {
-                    if (digits.indexOf(config.coverage[j]) === 0) {
-                        hasPrefix = true;
-                        break;
-                    }
+        if (!digits) return '';
+
+        // Check if starts with a known coverage prefix (longest first)
+        var hasPrefix = false;
+        if (config.coverage && Array.isArray(config.coverage)) {
+            // Sort by length descending so "965" matches before "96"
+            var sorted = config.coverage.slice().sort(function(a, b) {
+                return b.length - a.length;
+            });
+            for (var j = 0; j < sorted.length; j++) {
+                if (digits.indexOf(sorted[j]) === 0) {
+                    hasPrefix = true;
+                    break;
                 }
-            }
-            if (!hasPrefix && digits.length < 12) {
-                digits = config.default_country + digits;
             }
         }
 
-        if (digits) {
-            els.normalizedPreview.textContent =
-                KwtI18n.t('send_normalized', {number: digits});
+        // Prepend default country only if no recognized prefix AND local part is reasonable
+        // GCC local numbers: Kuwait 8 digits, Saudi 9, UAE 9, Bahrain 8, Qatar 8. Max 9.
+        if (!hasPrefix && config.default_country && digits.length <= 9) {
+            digits = config.default_country + digits;
+        }
+
+        return digits;
+    }
+
+    /**
+     * Validate a normalized phone number.
+     * Returns null if valid, or an error message string if invalid.
+     */
+    function validatePhone(normalized) {
+        if (!normalized) {
+            return KwtI18n.t('send_no_recipient');
+        }
+
+        // Must be digits only (should already be after normalizePhone)
+        if (/\D/.test(normalized)) {
+            return KwtI18n.t('error_no_valid_numbers');
+        }
+
+        // Length check: international numbers are typically 10-15 digits
+        if (normalized.length < 10 || normalized.length > 15) {
+            return KwtI18n.t('error_invalid_number', 'Invalid phone number length');
+        }
+
+        // Must start with a known coverage prefix
+        var matchedPrefix = false;
+        if (config.coverage && Array.isArray(config.coverage)) {
+            for (var j = 0; j < config.coverage.length; j++) {
+                if (normalized.indexOf(config.coverage[j]) === 0) {
+                    matchedPrefix = true;
+                    break;
+                }
+            }
+        }
+        if (!matchedPrefix) {
+            return KwtI18n.t('error_no_route', 'Country not supported. Check your kwtSMS coverage.');
+        }
+
+        return null; // valid
+    }
+
+    /**
+     * Update the normalization preview below the recipient field.
+     */
+    function normalizePreview() {
+        var normalized = normalizePhone(els.recipient.value);
+
+        if (normalized) {
+            var error = validatePhone(normalized);
+            if (error) {
+                els.normalizedPreview.textContent = error;
+                els.normalizedPreview.style.color = '#FF3B30';
+            } else {
+                els.normalizedPreview.textContent =
+                    KwtI18n.t('send_normalized', {number: normalized});
+                els.normalizedPreview.style.color = '#888';
+            }
         } else {
             els.normalizedPreview.textContent = '';
         }
@@ -256,6 +324,13 @@
         var text = els.message.value;
         var stats = SmsCounter.count(text);
 
+        // Enforce limit: truncate if exceeded
+        if (stats.exceeded) {
+            els.message.value = text.substring(0, stats.maxChars);
+            text = els.message.value;
+            stats = SmsCounter.count(text);
+        }
+
         var encodingLabel = stats.encoding === 'Unicode'
             ? KwtI18n.t('send_char_arabic')
             : KwtI18n.t('send_char_english');
@@ -264,15 +339,12 @@
             ? KwtI18n.t('send_char_page')
             : KwtI18n.t('send_char_pages');
 
+        // Show current chars and pages only, no limit
         els.charCounter.textContent =
-            stats.length + '/' + stats.maxChars +
-            ' (' + stats.pages + ' ' + pageLabel + ', ' + encodingLabel + ')';
+            stats.length + ' ' + encodingLabel +
+            ' (' + stats.pages + ' ' + pageLabel + ')';
 
-        if (stats.exceeded) {
-            els.charCounter.classList.add('exceeded');
-        } else {
-            els.charCounter.classList.remove('exceeded');
-        }
+        els.charCounter.classList.remove('exceeded');
 
         updateSendButtonState();
     }
@@ -300,16 +372,24 @@
     }
 
     function handleSend() {
-        var recipient = els.recipient.value.trim();
+        var rawRecipient = els.recipient.value.trim();
         var message = els.message.value.trim();
         var senderId = els.sender.value;
 
-        if (!recipient) {
+        if (!rawRecipient) {
             showResult('error', KwtI18n.t('send_no_recipient'));
             return;
         }
         if (!message) {
             showResult('error', KwtI18n.t('send_no_message'));
+            return;
+        }
+
+        // Normalize and validate phone number locally before any API call
+        var recipient = normalizePhone(rawRecipient);
+        var phoneError = validatePhone(recipient);
+        if (phoneError) {
+            showResult('error', phoneError);
             return;
         }
 

@@ -91,6 +91,8 @@
   "error_message_too_long": "Message too long (max 7 pages)",
   "error_cooldown": "Please wait 15 seconds before sending to this number again",
   "error_queue_full": "kwtSMS queue is full. Please try again later.",
+  "error_invalid_number": "Invalid phone number length",
+  "error_no_route": "Country not supported. Check your kwtSMS coverage.",
   "error_unknown": "An unexpected error occurred. Please try again.",
   "error_sdk_timeout": "Request timed out. Please try again.",
   "error_sdk_permission": "Permission denied. Contact your CRM administrator.",
