@@ -123,15 +123,20 @@
         gatewayDot.className = 'kwt-status-dot';
         gatewayDot.classList.add(config.enabled ? 'green' : 'gray');
 
-        // -- Test Mode badge --
-        var testBadge = document.getElementById('status-test-badge');
-        testBadge.classList.toggle('hidden', !config.test_mode);
-
-        // -- Test Mode banner --
+        // -- Test Mode banner (no badge in status bar, banner is enough) --
         document.getElementById('test-mode-banner').classList.toggle('hidden', !config.test_mode);
 
-        // -- Last Sync --
-        document.getElementById('status-last-sync').textContent = config.last_sync || KwtI18n.t('status_never');
+        // -- Last Sync (friendly format) --
+        var lastSyncText = KwtI18n.t('status_never');
+        if (config.last_sync) {
+            try {
+                var d = new Date(config.last_sync);
+                lastSyncText = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+            } catch (e) {
+                lastSyncText = config.last_sync;
+            }
+        }
+        document.getElementById('status-last-sync').textContent = lastSyncText;
 
         // -- Login form vs logged-in bar --
         var loginForm = document.getElementById('login-form');
