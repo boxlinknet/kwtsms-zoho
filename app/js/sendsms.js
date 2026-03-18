@@ -24,20 +24,29 @@
         cacheElements();
         bindEvents();
 
-        ZOHO.embeddedApp.on('PageLoad', function(data) {
-            currentEntity = data;
-        });
+        if (typeof ZOHO !== 'undefined' && ZOHO.embeddedApp) {
+            ZOHO.embeddedApp.on('PageLoad', function(data) {
+                currentEntity = data;
+            });
 
-        ZOHO.embeddedApp.init().then(function() {
-            return ZOHO.CRM.CONFIG.getCurrentUser();
-        }).then(function(response) {
-            var user = response && response.users ? response.users[0] : {};
-            KwtI18n.init(user, function() {
+            ZOHO.embeddedApp.init().then(function() {
+                return ZOHO.CRM.CONFIG.getCurrentUser();
+            }).then(function(response) {
+                var user = response && response.users ? response.users[0] : {};
+                KwtI18n.init(user, function() {
+                    KwtI18n.translatePage();
+                    loadConfig();
+                    prefillPhone();
+                });
+            });
+        } else {
+            // Local dev mode
+            KwtI18n.init(null, function() {
                 KwtI18n.translatePage();
                 loadConfig();
-                prefillPhone();
+                updateCharCounter();
             });
-        });
+        }
     }
 
     function bindEvents() {
@@ -46,7 +55,19 @@
         els.sendBtn.addEventListener('click', handleSend);
     }
 
+    var isLocalDev = (typeof ZOHO === 'undefined' || !ZOHO.embeddedApp);
+
     function loadConfig() {
+        if (isLocalDev) {
+            var stored = localStorage.getItem('kwtsms_config');
+            if (stored) {
+                try { config = JSON.parse(stored); } catch (e) { config = {}; }
+            }
+            populateSenders();
+            updateBanners();
+            updateSendButtonState();
+            return;
+        }
         ZOHO.CRM.FUNCTIONS.execute('kwtsms_get_config', {})
             .then(function(response) {
                 var output = response && response.details ? response.details.output : null;
@@ -303,28 +324,62 @@
         setSendButtonSending(true);
         hideResult();
 
-        ZOHO.CRM.FUNCTIONS.execute('kwtsms_send', {
-            arguments: JSON.stringify({
-                mobile: recipient,
-                message: message,
-                sender_id: senderId
-            })
-        })
-        .then(function(response) {
-            var output = response && response.details ? response.details.output : null;
-            if (typeof output === 'string') {
-                try { output = JSON.parse(output); } catch (e) { output = null; }
-            }
+        var sendPromise;
+        if (isLocalDev) {
+            var creds = JSON.parse(localStorage.getItem('kwtsms_creds') || '{}');
+            sendPromise = fetch('/api/proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    endpoint: 'send',
+                    payload: {
+                        username: creds.username,
+                        password: creds.password,
+                        sender: senderId,
+                        mobile: recipient,
+                        message: message,
+                        test: config.test_mode ? '1' : '0'
+                    }
+                })
+            }).then(function(r) { return r.json(); }).then(function(output) {
+                return { local: true, data: output };
+            });
+        } else {
+            sendPromise = ZOHO.CRM.FUNCTIONS.execute('kwtsms_send', {
+                arguments: JSON.stringify({
+                    mobile: recipient,
+                    message: message,
+                    sender_id: senderId
+                })
+            }).then(function(response) {
+                var output = response && response.details ? response.details.output : null;
+                if (typeof output === 'string') {
+                    try { output = JSON.parse(output); } catch (e) { output = null; }
+                }
+                return { local: false, data: output };
+            });
+        }
 
-            if (output && output.status === 'OK') {
+        sendPromise.then(function(result) {
+            var output = result.data;
+            var isOk = result.local ? (output && output.result === 'OK') : (output && output.status === 'OK');
+
+            if (isOk) {
+                var msgId = output['msg-id'] || output.msg_id || '';
+                var balance = output['balance-after'] || output.balance || '';
                 var detail = KwtI18n.t('send_success_detail', {
-                    msg_id: output.msg_id || '',
-                    balance: output.balance !== undefined ? output.balance : ''
+                    msg_id: msgId,
+                    balance: balance
                 });
                 showResult('success', KwtI18n.t('send_success') + ' ' + detail);
+                // Update cached balance
+                if (isLocalDev && balance) {
+                    config.balance = balance;
+                    localStorage.setItem('kwtsms_config', JSON.stringify(config));
+                }
             } else {
-                var errorMsg = output && output.error
-                    ? output.error
+                var errorMsg = (output && (output.error || output.description))
+                    ? (output.error || output.description)
                     : KwtI18n.t('send_error');
                 showResult('error', errorMsg);
             }

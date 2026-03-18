@@ -7,16 +7,24 @@
     // Initialization
     // -------------------------------------------------------------------------
 
-    ZOHO.embeddedApp.on('PageLoad', function() {
-        ZOHO.CRM.CONFIG.getCurrentUser().then(function(user) {
-            KwtI18n.init(user, function() {
-                KwtI18n.translatePage();
-                loadConfig();
+    // Check if running inside Zoho CRM or standalone (local dev)
+    if (typeof ZOHO !== 'undefined' && ZOHO.embeddedApp) {
+        ZOHO.embeddedApp.on('PageLoad', function() {
+            ZOHO.CRM.CONFIG.getCurrentUser().then(function(user) {
+                KwtI18n.init(user, function() {
+                    KwtI18n.translatePage();
+                    loadConfig();
+                });
             });
         });
-    });
-
-    ZOHO.embeddedApp.init();
+        ZOHO.embeddedApp.init();
+    } else {
+        // Local dev mode: init i18n, load config from localStorage
+        KwtI18n.init(null, function() {
+            KwtI18n.translatePage();
+            loadConfig();
+        });
+    }
 
     // -------------------------------------------------------------------------
     // Event listeners
@@ -236,35 +244,107 @@
         el.textContent = '';
     }
 
+    // -------------------------------------------------------------------------
+    // Zoho SDK / Local dev proxy switch
+    // -------------------------------------------------------------------------
+
+    var isLocalDev = (typeof ZOHO === 'undefined' || !ZOHO.embeddedApp);
+
     function callFunction(name, args) {
+        if (isLocalDev) {
+            return callFunctionLocal(name, args);
+        }
         return new Promise(function(resolve, reject) {
-            try {
-                ZOHO.CRM.FUNCTIONS.execute(name, {
-                    arguments: JSON.stringify(args)
-                }).then(function(response) {
-                    try {
-                        if (response && response.details && response.details.output) {
-                            var output = response.details.output;
-                            if (typeof output === 'string') {
-                                output = JSON.parse(output);
-                            }
-                            resolve(output);
-                        } else {
-                            reject(new Error('No output returned from function.'));
-                        }
-                    } catch (parseErr) {
-                        reject(new Error('Invalid response format.'));
-                    }
-                }).catch(function(sdkErr) {
-                    var msg = KwtI18n.t('error_unknown');
-                    if (sdkErr && sdkErr.message) {
-                        msg = sdkErr.message;
-                    }
-                    reject(new Error(msg));
-                });
-            } catch (err) {
-                reject(new Error(KwtI18n.t('error_unknown')));
+            ZOHO.CRM.FUNCTIONS.execute(name, {
+                arguments: JSON.stringify(args)
+            }).then(function(response) {
+                try {
+                    var output = response.details.output;
+                    if (typeof output === 'string') output = JSON.parse(output);
+                    resolve(output);
+                } catch (e) {
+                    reject(new Error('Invalid response format.'));
+                }
+            }).catch(function(err) {
+                reject(new Error(err.message || KwtI18n.t('error_unknown')));
+            });
+        });
+    }
+
+    /**
+     * Local dev mode: simulate Deluge functions via /api/proxy and localStorage.
+     * Credentials and config stored in localStorage (dev only, never in production).
+     */
+    function callFunctionLocal(name, args) {
+        if (name === 'kwtsms_get_config') {
+            return Promise.resolve(getLocalConfig());
+        }
+        if (name === 'kwtsms_save_config') {
+            return Promise.resolve(saveLocalConfig(args));
+        }
+        if (name === 'kwtsms_login') {
+            return loginLocal(args.username, args.password);
+        }
+        return Promise.reject(new Error('Function ' + name + ' not available in local dev mode'));
+    }
+
+    function getLocalConfig() {
+        var stored = localStorage.getItem('kwtsms_config');
+        if (stored) {
+            try { return JSON.parse(stored); } catch (e) {}
+        }
+        return {
+            enabled: false, test_mode: true, debug: false,
+            configured: false, sender_id: '', default_country: '965',
+            balance: 0, senderids: [], coverage: [], last_sync: ''
+        };
+    }
+
+    function saveLocalConfig(settings) {
+        var cfg = getLocalConfig();
+        if (settings.enabled !== undefined) cfg.enabled = settings.enabled;
+        if (settings.test_mode !== undefined) cfg.test_mode = settings.test_mode;
+        if (settings.debug !== undefined) cfg.debug = settings.debug;
+        if (settings.sender_id) cfg.sender_id = settings.sender_id;
+        if (settings.default_country) cfg.default_country = settings.default_country;
+        localStorage.setItem('kwtsms_config', JSON.stringify(cfg));
+        return { status: 'OK' };
+    }
+
+    function apiProxy(endpoint, payload) {
+        return fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint: endpoint, payload: payload })
+        }).then(function(res) { return res.json(); });
+    }
+
+    function loginLocal(username, password) {
+        var creds = { username: username, password: password };
+        return apiProxy('balance', creds).then(function(balanceRes) {
+            if (balanceRes.result !== 'OK') {
+                return { status: 'ERROR', error: KwtI18n.t('setup_error') };
             }
+            var cfg = getLocalConfig();
+            cfg.configured = true;
+            cfg.balance = balanceRes.available || 0;
+
+            return apiProxy('senderid', creds).then(function(senderRes) {
+                cfg.senderids = (senderRes.result === 'OK' && senderRes.senderid) ? senderRes.senderid : [];
+                return apiProxy('coverage', creds);
+            }).then(function(coverageRes) {
+                cfg.coverage = (coverageRes.result === 'OK' && coverageRes.prefixes) ? coverageRes.prefixes : [];
+                cfg.last_sync = new Date().toISOString();
+                cfg.enabled = true;
+                cfg.test_mode = true;
+                if (cfg.senderids.length > 0 && !cfg.sender_id) {
+                    cfg.sender_id = cfg.senderids[0];
+                }
+                // Store credentials in localStorage for dev send testing
+                localStorage.setItem('kwtsms_creds', JSON.stringify(creds));
+                localStorage.setItem('kwtsms_config', JSON.stringify(cfg));
+                return { status: 'OK', balance: cfg.balance };
+            });
         });
     }
 

@@ -28,6 +28,51 @@ expressApp.get('/plugin-manifest.json', function(req, res) {
     res.sendFile(path.join(process.env.PWD, 'plugin-manifest.json'));
 });
 
+// ── Local dev API proxy (forwards to kwtSMS API, avoids CORS) ──
+expressApp.post('/api/proxy', function(req, res) {
+    var endpoint = req.body.endpoint; // e.g. "balance", "send", "senderid", "coverage", "validate"
+    var payload = req.body.payload;   // JSON object to POST to kwtSMS
+
+    if (!endpoint || !payload) {
+        return res.json({ result: 'ERROR', error: 'Missing endpoint or payload' });
+    }
+
+    var url = 'https://www.kwtsms.com/API/' + endpoint + '/';
+    var postData = JSON.stringify(payload);
+
+    var urlModule = require('url');
+    var parsed = urlModule.parse(url);
+    var options = {
+        hostname: parsed.hostname,
+        path: parsed.path,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+        }
+    };
+
+    var apiReq = https.request(options, function(apiRes) {
+        var body = '';
+        apiRes.on('data', function(chunk) { body += chunk; });
+        apiRes.on('end', function() {
+            try {
+                res.json(JSON.parse(body));
+            } catch (e) {
+                res.json({ result: 'ERROR', error: 'Invalid API response' });
+            }
+        });
+    });
+
+    apiReq.on('error', function(err) {
+        res.json({ result: 'ERROR', error: 'API request failed: ' + err.message });
+    });
+
+    apiReq.write(postData);
+    apiReq.end();
+});
+
 expressApp.use('/app', express.static('app'));
 expressApp.use('/app', serveIndex('app'));
 

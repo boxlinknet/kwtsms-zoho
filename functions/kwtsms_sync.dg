@@ -108,9 +108,9 @@ try
 			content-type: "application/json"
 		];
 		coverage_data = coverage_response.toMap();
-		if(coverage_data.containKey("coverage"))
+		if(coverage_data.containKey("prefixes"))
 		{
-			zoho.crm.setOrgVariable("kwtsms_coverage_json", coverage_data.get("coverage").toString());
+			zoho.crm.setOrgVariable("kwtsms_coverage_json", coverage_data.get("prefixes").toString());
 			info "kwtsms_sync: coverage data updated";
 		}
 	}

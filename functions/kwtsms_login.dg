@@ -86,9 +86,9 @@ try
 			content-type: "application/json"
 		];
 		coverage_data = coverage_response.toMap();
-		if(coverage_data.containKey("coverage"))
+		if(coverage_data.containKey("prefixes"))
 		{
-			coverage = coverage_data.get("coverage");
+			coverage = coverage_data.get("prefixes");
 			zoho.crm.setOrgVariable("kwtsms_coverage_json", coverage.toString());
 			info "kwtsms_login: coverage data cached";
 		}
