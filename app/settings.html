@@ -47,16 +47,29 @@
         <!-- Gateway Setup Section -->
         <div class="kwt-section">
             <h2 class="kwt-section-title" data-i18n="setup_title">Gateway Setup</h2>
-            <div class="kwt-form-group">
-                <label for="login-username" data-i18n="setup_username">API Username</label>
-                <input type="text" id="login-username" class="kwt-input" data-i18n-placeholder="setup_username_placeholder" placeholder="Enter your kwtSMS API username" autocomplete="username">
+            <div id="login-form">
+                <div class="kwt-form-group">
+                    <label for="login-username" data-i18n="setup_username">API Username</label>
+                    <input type="text" id="login-username" class="kwt-input" data-i18n-placeholder="setup_username_placeholder" placeholder="Enter your kwtSMS API username" autocomplete="username">
+                </div>
+                <div class="kwt-form-group">
+                    <label for="login-password" data-i18n="setup_password">API Password</label>
+                    <input type="password" id="login-password" class="kwt-input" data-i18n-placeholder="setup_password_placeholder" placeholder="Enter your kwtSMS API password" autocomplete="current-password">
+                </div>
+                <div class="kwt-form-group">
+                    <button id="login-btn" class="kwt-btn kwt-btn-primary" data-i18n="setup_login">Login</button>
+                </div>
             </div>
-            <div class="kwt-form-group">
-                <label for="login-password" data-i18n="setup_password">API Password</label>
-                <input type="password" id="login-password" class="kwt-input" data-i18n-placeholder="setup_password_placeholder" placeholder="Enter your kwtSMS API password" autocomplete="current-password">
-            </div>
-            <div class="kwt-form-group">
-                <button id="login-btn" class="kwt-btn kwt-btn-primary" data-i18n="setup_login">Login</button>
+            <div id="logged-in-bar" class="hidden" style="display:none">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm" style="color:#155724">
+                        <strong data-i18n="status_gateway">Gateway</strong>: <span data-i18n="setup_success">Connected successfully</span>
+                    </span>
+                    <div class="flex gap-8">
+                        <button id="reload-btn" class="kwt-btn kwt-btn-secondary kwt-btn-sm" data-i18n="setup_reload">Reload</button>
+                        <button id="logout-btn" class="kwt-btn kwt-btn-secondary kwt-btn-sm" data-i18n="setup_logout">Logout</button>
+                    </div>
+                </div>
             </div>
             <div id="login-result" class="kwt-result hidden"></div>
         </div>
@@ -65,16 +78,12 @@
         <div id="config-section" class="kwt-section hidden">
             <h2 class="kwt-section-title" data-i18n="config_title">Configuration</h2>
             <div class="kwt-form-group">
-                <label for="config-country" data-i18n="config_default_country">Default Country</label>
-                <select id="config-country" class="kwt-select">
-                    <option value="">Select country...</option>
-                </select>
-            </div>
-            <div class="kwt-form-group">
-                <label for="config-sender" data-i18n="config_sender_id">Sender ID</label>
-                <select id="config-sender" class="kwt-select">
-                    <option value="">Select sender...</option>
-                </select>
+                <label data-i18n="config_gateway_enabled">Gateway Enabled</label>
+                <label class="kwt-toggle">
+                    <input type="checkbox" id="toggle-enabled">
+                    <span class="slider"></span>
+                    <span class="toggle-label" data-i18n="config_gateway_enabled_desc">Enable or disable SMS sending globally</span>
+                </label>
             </div>
             <div class="kwt-form-group">
                 <label data-i18n="config_test_mode">Test Mode</label>
@@ -85,12 +94,16 @@
                 </label>
             </div>
             <div class="kwt-form-group">
-                <label data-i18n="config_gateway_enabled">Gateway Enabled</label>
-                <label class="kwt-toggle">
-                    <input type="checkbox" id="toggle-enabled">
-                    <span class="slider"></span>
-                    <span class="toggle-label" data-i18n="config_gateway_enabled_desc">Enable or disable SMS sending globally</span>
-                </label>
+                <label for="config-sender" data-i18n="config_sender_id">Sender ID</label>
+                <select id="config-sender" class="kwt-select">
+                    <option value="">Select sender...</option>
+                </select>
+            </div>
+            <div class="kwt-form-group">
+                <label for="config-country" data-i18n="config_default_country">Default Country</label>
+                <select id="config-country" class="kwt-select">
+                    <option value="">Select country...</option>
+                </select>
             </div>
             <div class="kwt-form-group">
                 <label data-i18n="config_debug">Debug Logging</label>
