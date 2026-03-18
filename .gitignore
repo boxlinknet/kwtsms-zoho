@@ -1,3 +1,7 @@
+# SSL certs (generated locally)
+cert.pem
+key.pem
+
 # IDE
 .idea/
 .vscode/
