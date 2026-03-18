@@ -1,0 +1,10 @@
+{
+  "name": "kwtsms-zoho-crm",
+  "version": "1.0.0",
+  "description": "kwtSMS Gateway Connector for Zoho CRM",
+  "private": true,
+  "dependencies": {
+    "portfinder": "^1.0.32",
+    "express": "^4.18.2"
+  }
+}

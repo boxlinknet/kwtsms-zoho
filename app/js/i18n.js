@@ -36,7 +36,7 @@ var KwtI18n = (function() {
      */
     function loadStrings(lang, callback) {
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', 'i18n/' + lang + '.json', true);
+        xhr.open('GET', 'translations/' + lang + '.json', true);
         xhr.onreadystatechange = function() {
             if (xhr.readyState === 4) {
                 if (xhr.status === 200) {
@@ -47,7 +47,7 @@ var KwtI18n = (function() {
                         callback(e, null);
                     }
                 } else {
-                    callback(new Error('Failed to load i18n/' + lang + '.json'), null);
+                    callback(new Error('Failed to load translations/' + lang + '.json'), null);
                 }
             }
         };
