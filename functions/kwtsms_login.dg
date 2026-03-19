@@ -44,7 +44,7 @@ try
 	zoho.crm.setOrgVariable("kwtsms_username", username);
 	zoho.crm.setOrgVariable("kwtsms_password", password);
 	zoho.crm.setOrgVariable("kwtsms_balance", balance.toString());
-	info "kwtsms_login: credentials saved, balance = " + balance;
+	info "kwtsms_login: credentials saved, balance updated";
 	// Step 3: Fetch sender IDs
 	senderid_payload = Map();
 	senderid_payload.put("username", username);

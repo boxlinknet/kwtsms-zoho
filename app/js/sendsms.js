@@ -93,21 +93,21 @@
 
         var senderIds = config.senderids;
         if (!senderIds || !senderIds.length) {
-            var opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = KwtI18n.t('config_no_senders');
-            els.sender.appendChild(opt);
+            var emptyOpt = document.createElement('option');
+            emptyOpt.value = '';
+            emptyOpt.textContent = KwtI18n.t('config_no_senders');
+            els.sender.appendChild(emptyOpt);
             return;
         }
 
         for (var i = 0; i < senderIds.length; i++) {
-            var opt = document.createElement('option');
-            opt.value = senderIds[i];
-            opt.textContent = senderIds[i];
+            var senderOpt = document.createElement('option');
+            senderOpt.value = senderIds[i];
+            senderOpt.textContent = senderIds[i];
             if (config.sender_id && senderIds[i] === config.sender_id) {
-                opt.selected = true;
+                senderOpt.selected = true;
             }
-            els.sender.appendChild(opt);
+            els.sender.appendChild(senderOpt);
         }
     }
 

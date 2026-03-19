@@ -288,29 +288,23 @@ try
 	// =========================================================
 	// Step 8: Check message length limits
 	// =========================================================
-	// Detect if message contains Arabic/Unicode characters
-	// If any non-ASCII character remains, treat as Unicode
-	ascii_only = cleaned.replaceAll("[\\x{0000}-\\x{007F}]", "");
-	is_unicode = false;
-	if(ascii_only.length() > 0)
+	// Check message length. The kwtSMS API enforces the actual encoding limits.
+	// Client-side sms-counter.js handles accurate GSM-7 vs Unicode detection.
+	// Server-side we use the Unicode limit (472) as the strict check for Arabic,
+	// and 1071 for GSM-7. We detect Arabic by checking for Arabic Unicode block.
+	has_arabic = (cleaned.replaceAll("[^\\x{0600}-\\x{06FF}\\x{0750}-\\x{077F}\\x{08A0}-\\x{08FF}\\x{FB50}-\\x{FDFF}\\x{FE70}-\\x{FEFF}]", "").length() > 0);
+	if(has_arabic)
 	{
-		is_unicode = true;
-	}
-	if(is_unicode)
-	{
-		// Unicode: max 7 pages * 67 chars + first page 70 = 70 + 6*67 = 472
 		if(cleaned.length() > 472)
 		{
 			result.put("status", "ERROR");
-			result.put("error", "Message too long: " + cleaned.length() + " Unicode characters (max 472)");
-			info "kwtsms_send: aborted, message too long (unicode)";
+			result.put("error", "Message too long: " + cleaned.length() + " Arabic characters (max 472)");
+			info "kwtsms_send: aborted, message too long (arabic)";
 			return result;
 		}
 	}
 	else
 	{
-		// English: max 7 pages * 153 chars + first page 160 = 160 + 6*153 = 1078
-		// Using the spec value of 1071
 		if(cleaned.length() > 1071)
 		{
 			result.put("status", "ERROR");

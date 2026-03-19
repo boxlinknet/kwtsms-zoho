@@ -91,7 +91,7 @@ catch(e)
 {
 	info "kwtsms_save_config: error saving config: " + e;
 	result.put("status", "ERROR");
-	result.put("error", "Failed to save configuration: " + e.toString());
+	result.put("error", "Failed to save configuration");
 }
 
 return result;

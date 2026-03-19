@@ -1,0 +1,41 @@
+// =========================================================
+// kwtsms_logout
+// Clears stored credentials and resets configuration.
+// Called when user clicks Logout in the settings widget.
+// =========================================================
+
+result = Map();
+
+try
+{
+	// Clear credentials
+	zoho.crm.setOrgVariable("kwtsms_username", "");
+	zoho.crm.setOrgVariable("kwtsms_password", "");
+
+	// Reset flags
+	flags = Map();
+	flags.put("enabled", false);
+	flags.put("test_mode", true);
+	flags.put("debug", false);
+	zoho.crm.setOrgVariable("kwtsms_flags", flags.toString());
+
+	// Clear cached data
+	zoho.crm.setOrgVariable("kwtsms_sender_id", "");
+	zoho.crm.setOrgVariable("kwtsms_default_country", "965");
+	zoho.crm.setOrgVariable("kwtsms_balance", "0");
+	zoho.crm.setOrgVariable("kwtsms_senderids_json", "[]");
+	zoho.crm.setOrgVariable("kwtsms_coverage_json", "[]");
+	zoho.crm.setOrgVariable("kwtsms_last_sync", "");
+	zoho.crm.setOrgVariable("kwtsms_configured", "false");
+
+	info "kwtsms_logout: credentials cleared, configuration reset";
+	result.put("status", "OK");
+}
+catch(e)
+{
+	info "kwtsms_logout: failed: " + e;
+	result.put("status", "ERROR");
+	result.put("error", "Failed to logout");
+}
+
+return result;

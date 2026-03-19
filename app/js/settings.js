@@ -246,19 +246,32 @@
     // -------------------------------------------------------------------------
 
     function handleLogout() {
+        var logoutBtn = document.getElementById('logout-btn');
+        logoutBtn.disabled = true;
+
         if (isLocalDev) {
             localStorage.removeItem('kwtsms_config');
             localStorage.removeItem('kwtsms_creds');
+            resetConfigAndUI();
+            logoutBtn.disabled = false;
         } else {
-            // In Zoho: clear credentials and configured flag
-            callFunction('kwtsms_save_config', {
-                enabled: false
-            });
-            // Would need a dedicated logout Deluge function to clear Hidden variables
+            callFunction('kwtsms_logout', {})
+                .then(function() {
+                    resetConfigAndUI();
+                })
+                .catch(function() {
+                    resetConfigAndUI();
+                })
+                .finally(function() {
+                    logoutBtn.disabled = false;
+                });
         }
+    }
+
+    function resetConfigAndUI() {
         config = {
             enabled: false, test_mode: true, debug: false,
-            configured: false, sender_id: '', default_country: '965',
+            configured: false, sender_id: 'KWT-SMS', default_country: '965',
             balance: 0, senderids: [], coverage: [], last_sync: ''
         };
         document.getElementById('login-username').value = '';
@@ -409,6 +422,7 @@
         if (name === 'kwtsms_save_config') return Promise.resolve(saveLocalConfig(args));
         if (name === 'kwtsms_login') return loginLocal(args.username, args.password);
         if (name === 'kwtsms_sync') return handleReloadLocal();
+        if (name === 'kwtsms_logout') return Promise.resolve({ status: 'OK' });
         return Promise.reject(new Error('Function ' + name + ' not available in local dev mode'));
     }
 
