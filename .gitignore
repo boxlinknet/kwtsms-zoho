@@ -1,6 +1,5 @@
-# SSL certs (generated locally)
-cert.pem
-key.pem
+# SSL certs
+*.pem
 
 # IDE
 .idea/
