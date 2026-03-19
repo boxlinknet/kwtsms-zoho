@@ -1,6 +1,13 @@
 # kwtSMS for Zoho CRM
 
-Send SMS from Zoho CRM via Kuwait's leading SMS gateway.
+[![Zoho Marketplace](https://img.shields.io/badge/Zoho_Marketplace-kwtSMS-blue?logo=zoho)](https://marketplace.zoho.com/app/crm/kwtsms-for-zoho-crm)
+[![Version](https://img.shields.io/badge/version-1.0-green)](https://github.com/boxlinknet/kwtsms-zoho/releases)
+[![Edition](https://img.shields.io/badge/Zoho_CRM-Professional%2B-orange)](https://www.zoho.com/crm/zoho-crm-pricing.html)
+[![License](https://img.shields.io/badge/license-Proprietary-lightgrey)](LICENSE)
+[![kwtSMS](https://img.shields.io/badge/SMS_Gateway-kwtSMS-FFA200?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHRleHQgeT0iMTIiIGZvbnQtc2l6ZT0iMTIiPvCfk6g8L3RleHQ+PC9zdmc+)](https://www.kwtsms.com)
+[![Arabic](https://img.shields.io/badge/lang-English%20%7C%20العربية-79CCF2)](#)
+
+Send SMS from Zoho CRM via [kwtSMS](https://www.kwtsms.com) gateway.
 
 ## Overview
 
@@ -20,11 +27,11 @@ A lightweight SMS gateway connector that integrates [kwtSMS](https://www.kwtsms.
 ## Requirements
 
 - Zoho CRM **Professional** edition or above
-- A [kwtSMS](https://www.kwtsms.com) account with API access
+- A [kwtSMS](https://www.kwtsms.com) account with API access ([sign up free](https://www.kwtsms.com/signup))
 
 ## Installation
 
-1. Install from the [Zoho Marketplace](https://marketplace.zoho.com/app/crm)
+1. Install from the [Zoho Marketplace](https://marketplace.zoho.com/app/crm/kwtsms-for-zoho-crm)
 2. Open the **kwtSMS** tab in Zoho CRM
 3. Enter your kwtSMS API credentials and click **Login**
 4. Select your sender ID and default country
@@ -39,8 +46,18 @@ Create Zoho CRM workflow rules that call `kwtsms_send()` to automate SMS on any 
 - Contact birthday: send greeting
 - Invoice overdue: send reminder (via Zoho Flow)
 
-## Support
+## Development
 
+```bash
+npm install                  # Install dependencies
+zet run                      # Start local dev server (HTTPS on port 5000)
+zet validate                 # Check for errors
+zet pack                     # Package for upload (dist/*.zip)
+```
+
+## Links
+
+- **kwtSMS Website:** [kwtsms.com](https://www.kwtsms.com)
 - **kwtSMS Support:** [kwtsms.com/support.html](https://www.kwtsms.com/support.html)
 - **API Documentation:** [kwtsms.com/developers.html](https://www.kwtsms.com/developers.html)
 - **Zoho CRM Developer Docs:** [zoho.com/crm/developer/docs/](https://www.zoho.com/crm/developer/docs/)
