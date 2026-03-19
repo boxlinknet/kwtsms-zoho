@@ -80,16 +80,28 @@ expressApp.get('/', function(req, res) {
     res.redirect('/app');
 });
 
-var options = {
-    key: fs.readFileSync('./key.pem'),
-    cert: fs.readFileSync('./cert.pem')
-};
-
-https.createServer(options, expressApp).listen(port, function() {
-    console.log(chalk.green('Zet running at https://127.0.0.1:' + port));
-    console.log(chalk.bold.cyan('Note: Please enable the host (https://127.0.0.1:' + port + ') in a new tab and authorize the connection by clicking Advanced->Proceed to 127.0.0.1 (unsafe).'));
-}).on('error', function(err) {
-    if (err.code === 'EADDRINUSE') {
-        console.log(chalk.bold.red(port + ' port is already in use'));
-    }
-});
+try {
+    var options = {
+        key: fs.readFileSync('./key.pem'),
+        cert: fs.readFileSync('./cert.pem')
+    };
+    https.createServer(options, expressApp).listen(port, function() {
+        console.log(chalk.green('Zet running at https://127.0.0.1:' + port));
+        console.log(chalk.bold.cyan('Note: Accept the self-signed certificate in your browser.'));
+    }).on('error', function(err) {
+        if (err.code === 'EADDRINUSE') {
+            console.log(chalk.bold.red(port + ' port is already in use'));
+        }
+    });
+} catch (e) {
+    // No SSL certs found, fall back to HTTP
+    var http = require('http');
+    http.createServer(expressApp).listen(port, function() {
+        console.log(chalk.green('Zet running at http://127.0.0.1:' + port));
+        console.log(chalk.yellow('No SSL certs found. To use HTTPS, run: openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"'));
+    }).on('error', function(err) {
+        if (err.code === 'EADDRINUSE') {
+            console.log(chalk.bold.red(port + ' port is already in use'));
+        }
+    });
+}

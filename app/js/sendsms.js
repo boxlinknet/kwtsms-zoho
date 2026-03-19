@@ -324,13 +324,6 @@
         var text = els.message.value;
         var stats = SmsCounter.count(text);
 
-        // Enforce limit: truncate if exceeded
-        if (stats.exceeded) {
-            els.message.value = text.substring(0, stats.maxChars);
-            text = els.message.value;
-            stats = SmsCounter.count(text);
-        }
-
         var encodingLabel = stats.encoding === 'Unicode'
             ? KwtI18n.t('send_char_arabic')
             : KwtI18n.t('send_char_english');
@@ -339,12 +332,16 @@
             ? KwtI18n.t('send_char_page')
             : KwtI18n.t('send_char_pages');
 
-        // Show current chars and pages only, no limit
+        // Show current chars and pages
         els.charCounter.textContent =
             stats.length + ' ' + encodingLabel +
             ' (' + stats.pages + ' ' + pageLabel + ')';
 
-        els.charCounter.classList.remove('exceeded');
+        if (stats.exceeded) {
+            els.charCounter.classList.add('exceeded');
+        } else {
+            els.charCounter.classList.remove('exceeded');
+        }
 
         updateSendButtonState();
     }

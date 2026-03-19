@@ -138,17 +138,17 @@ try
 		{
 			num = default_country + num;
 		}
-		// Check coverage prefix
-		has_match = false;
+		// Check coverage prefix (longest match first)
+		best_match = "";
 		for each  prefix in coverage_list
 		{
 			p = prefix.replaceAll("\"", "").trim();
-			if(p != "" && num.startsWith(p))
+			if(p != "" && num.startsWith(p) && p.length() > best_match.length())
 			{
-				has_match = true;
-				break;
+				best_match = p;
 			}
 		}
+		has_match = (best_match != "");
 		if(!has_match && !num.startsWith(default_country))
 		{
 			num = default_country + num;
@@ -190,15 +190,16 @@ try
 		for each  num in unique_numbers
 		{
 			is_covered = false;
+			cov_best = "";
 			for each  prefix in coverage_list
 			{
 				p = prefix.replaceAll("\"", "").trim();
-				if(p != "" && num.startsWith(p))
+				if(p != "" && num.startsWith(p) && p.length() > cov_best.length())
 				{
-					is_covered = true;
-					break;
+					cov_best = p;
 				}
 			}
+			is_covered = (cov_best != "");
 			if(is_covered)
 			{
 				covered_numbers.add(num);

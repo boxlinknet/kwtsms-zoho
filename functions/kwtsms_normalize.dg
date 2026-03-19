@@ -59,18 +59,20 @@ if(coverage_raw != null && coverage_raw != "" && coverage_raw != "null")
 	try
 	{
 		coverage_list = coverage_raw.toJSONList();
-		// Sort by length descending (longest prefix first) for best match
-		// Deluge has no built-in sort, so we check longest first manually
-		// by iterating multiple passes: first check prefixes of length >= 4,
-		// then >= 3, then >= 2, then >= 1
+		// Match longest prefix first to avoid "96" matching before "965"
+		// Deluge has no sort, so we do multiple passes by prefix length
+		best_match = "";
 		for each  prefix in coverage_list
 		{
 			p = prefix.replaceAll("\"", "").trim();
-			if(p != "" && normalized.startsWith(p))
+			if(p != "" && normalized.startsWith(p) && p.length() > best_match.length())
 			{
-				has_coverage_match = true;
-				break;
+				best_match = p;
 			}
+		}
+		if(best_match != "")
+		{
+			has_coverage_match = true;
 		}
 	}
 	catch(e)
