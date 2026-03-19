@@ -31,4 +31,4 @@ If you discover a security vulnerability in this extension, please report it res
 - Input sanitization on all user inputs (phone numbers, message text)
 - Generic error messages for authentication failures (prevents enumeration)
 - HTTPS POST for all API communication (never GET)
-- No client-side credential storage (no localStorage, no cookies)
+- No client-side credential storage in production (credentials stored in Zoho Hidden Custom Variables, never in browser). Local dev server uses localStorage for testing convenience only.
